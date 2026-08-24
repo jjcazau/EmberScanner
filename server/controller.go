@@ -273,7 +273,7 @@ func (controller *Controller) IngestCall(call *Call) {
 
 		if len(call.Meta.UnitRefs) > 0 {
 			for i, unitRef := range call.Meta.UnitRefs {
-				if len(call.Meta.UnitLabels)-1 > i {
+				if i < len(call.Meta.UnitLabels) {
 					if len(call.Meta.UnitLabels[i]) > 0 {
 						units.Add(unitRef, call.Meta.UnitLabels[i])
 					}

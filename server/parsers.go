@@ -245,6 +245,21 @@ func ParseSdrTrunkMeta(call *Call, controller *Controller) error {
 	return nil
 }
 
+func appendUnitMetadata(call *Call, unitRef uint, label string) {
+	if unitRef == 0 || len(label) == 0 {
+		return
+	}
+
+	for _, ref := range call.Meta.UnitRefs {
+		if ref == unitRef {
+			return
+		}
+	}
+
+	call.Meta.UnitRefs = append(call.Meta.UnitRefs, unitRef)
+	call.Meta.UnitLabels = append(call.Meta.UnitLabels, label)
+}
+
 func ParseMultipartContent(call *Call, p *multipart.Part, b []byte) {
 	switch p.FormName() {
 	case "audio":
@@ -369,9 +384,7 @@ func ParseMultipartContent(call *Call, p *multipart.Part, b []byte) {
 						}
 						switch s := v["tag"].(type) {
 						case string:
-							if len(s) > 0 {
-								call.Meta.UnitLabels = []string{s}
-							}
+							appendUnitMetadata(call, unit.UnitRef, s)
 						}
 					}
 					call.Units = append(call.Units, unit)
@@ -447,9 +460,7 @@ func ParseMultipartContent(call *Call, p *multipart.Part, b []byte) {
 						}
 						switch s := v["label"].(type) {
 						case string:
-							if len(s) > 0 {
-								call.Meta.UnitLabels = []string{s}
-							}
+							appendUnitMetadata(call, unit.UnitRef, s)
 						}
 						switch v := v["offset"].(type) {
 						case float64:
