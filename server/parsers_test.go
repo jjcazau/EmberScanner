@@ -50,6 +50,28 @@ func TestParseMultipartUnitsPopulatesCallHistoryAndMetadata(t *testing.T) {
 	}
 }
 
+func TestParseMultipartChannelTypePreservesConventionalMetadata(t *testing.T) {
+	call := NewCall()
+	parseMultipartField(t, call, "channelType", "conventional")
+	parseMultipartField(t, call, "talkgroupLabel", "GASTON-FIRE")
+
+	if call.Meta.ChannelType != "conventional" {
+		t.Fatalf("channel type = %q, want conventional", call.Meta.ChannelType)
+	}
+	if call.Meta.TalkgroupLabel != "GASTON-FIRE" {
+		t.Fatalf("talkgroup label = %q, want GASTON-FIRE", call.Meta.TalkgroupLabel)
+	}
+}
+
+func TestParseMultipartUnknownChannelTypeIsIgnored(t *testing.T) {
+	call := NewCall()
+	parseMultipartField(t, call, "channelType", "frequency-ish")
+
+	if call.Meta.ChannelType != "" {
+		t.Fatalf("unknown channel type = %q, want empty", call.Meta.ChannelType)
+	}
+}
+
 func TestParseMultipartUnlabeledUnitDoesNotInventMetadata(t *testing.T) {
 	call := NewCall()
 	parseMultipartField(t, call, "units", `[{"id":710618,"offset":0.03}]`)

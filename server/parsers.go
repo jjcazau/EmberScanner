@@ -273,6 +273,12 @@ func ParseMultipartContent(call *Call, p *multipart.Part, b []byte) {
 	case "audioMime", "audioType":
 		call.AudioMime = string(b)
 
+	case "channelType":
+		channelType := strings.ToLower(strings.TrimSpace(string(b)))
+		if channelType == "trunked" || channelType == "conventional" {
+			call.Meta.ChannelType = channelType
+		}
+
 	case "dateTime":
 		if regexp.MustCompile(`^[0-9]+$`).Match(b) {
 			if i, err := strconv.Atoi(string(b)); err == nil {

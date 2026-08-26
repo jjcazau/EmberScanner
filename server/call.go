@@ -55,6 +55,7 @@ type CallMeta struct {
 	TalkgroupName   string
 	TalkgroupRef    uint
 	TalkgroupTag    string
+	ChannelType     string
 	UnitLabels      []string
 	UnitRefs        []uint
 }
@@ -164,6 +165,16 @@ func (call *Call) MarshalJSON() ([]byte, error) {
 
 	if call.Talkgroup != nil {
 		callMap["talkgroup"] = call.Talkgroup.TalkgroupRef
+		if len(call.Talkgroup.Label) > 0 {
+			callMap["talkgroupLabel"] = call.Talkgroup.Label
+		}
+		if len(call.Talkgroup.Name) > 0 {
+			callMap["talkgroupName"] = call.Talkgroup.Name
+		}
+	}
+
+	if len(call.Meta.ChannelType) > 0 {
+		callMap["channelType"] = call.Meta.ChannelType
 	}
 
 	if len(call.Units) > 0 {

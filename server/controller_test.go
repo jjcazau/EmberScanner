@@ -106,3 +106,36 @@ func TestIngestCallPreservesExistingUnitBehavior(t *testing.T) {
 		t.Fatalf("existing unit changed: %#v", system.Units.List[0])
 	}
 }
+
+func TestIngestCallRepairsGeneratedTalkgroupLabel(t *testing.T) {
+	controller := newUnitIngestController(t)
+	system := NewSystem()
+	system.SystemRef = 4
+	system.Label = "Gaston County Conventional"
+	system.AutoPopulate = true
+	talkgroup := NewTalkgroup()
+	talkgroup.TalkgroupRef = 1514000
+	talkgroup.Label = "1514000"
+	talkgroup.Name = "Talkgroup 1514000"
+	system.Talkgroups.List = append(system.Talkgroups.List, talkgroup)
+	controller.Systems.List = append(controller.Systems.List, system)
+
+	call := NewCall()
+	call.Audio = make([]byte, 45)
+	call.AudioFilename = "conventional.wav"
+	call.System = system
+	call.Talkgroup = talkgroup
+	call.Meta.TalkgroupLabel = "GASTON-FIRE"
+	call.Meta.ChannelType = "conventional"
+
+	controller.IngestCall(call)
+
+	updated, ok := controller.Systems.GetSystemByRef(system.SystemRef)
+	if !ok {
+		t.Fatal("ingested system was not reloaded")
+	}
+	got, ok := updated.Talkgroups.GetTalkgroupByRef(1514000)
+	if !ok || got.Label != "GASTON-FIRE" {
+		t.Fatalf("talkgroup = %#v, found=%v", got, ok)
+	}
+}
