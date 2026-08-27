@@ -168,6 +168,23 @@ func (controller *Controller) IngestCall(call *Call) {
 		}
 	}
 
+	// A prior auto-populated call may have created the compatibility
+	// talkgroup with its numeric reference as the label. Preserve any
+	// configured/manual label, but allow a later labeled upload to repair only
+	// that generated placeholder. This does not affect call history or schema.
+	if call.System != nil && call.Talkgroup != nil &&
+		(controller.Options.AutoPopulate || call.System.AutoPopulate) &&
+		len(call.Meta.TalkgroupLabel) > 0 &&
+		(call.Talkgroup.Label == "" || call.Talkgroup.Label == fmt.Sprintf("%d", call.Talkgroup.TalkgroupRef)) {
+		call.Talkgroup.Label = call.Meta.TalkgroupLabel
+		if len(call.Meta.TalkgroupName) > 0 {
+			call.Talkgroup.Name = call.Meta.TalkgroupName
+		} else if call.Talkgroup.Name == "" || call.Talkgroup.Name == fmt.Sprintf("Talkgroup %d", call.Talkgroup.TalkgroupRef) {
+			call.Talkgroup.Name = call.Meta.TalkgroupLabel
+		}
+		populated = true
+	}
+
 	if controller.Options.AutoPopulate && call.System == nil {
 		populated = true
 
@@ -273,7 +290,7 @@ func (controller *Controller) IngestCall(call *Call) {
 
 		if len(call.Meta.UnitRefs) > 0 {
 			for i, unitRef := range call.Meta.UnitRefs {
-				if len(call.Meta.UnitLabels)-1 > i {
+				if i < len(call.Meta.UnitLabels) {
 					if len(call.Meta.UnitLabels[i]) > 0 {
 						units.Add(unitRef, call.Meta.UnitLabels[i])
 					}
