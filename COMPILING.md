@@ -1,8 +1,8 @@
 # How to compile
 
-> RDIO SCANNER REPRESENTS A LOT OF INVESTMENT IN TIME, SUPPORT, TESTS AND MATERIALS. BY INTENTIONALLY MODIFYING ITS CODE TO REMOVE ITS IDENTITY, YOU HARM THE OPEN SOURCE PROJECT AND ITS AUTHOR. PLEASE BE RESPECTFUL, SPONSOR THIS PROJECT, USE NATIVE APPS IF POSSIBLE.
+> EMBER SCANNER REPRESENTS A LOT OF INVESTMENT IN TIME, SUPPORT, TESTS AND MATERIALS. BY INTENTIONALLY MODIFYING ITS CODE TO REMOVE ITS IDENTITY, YOU HARM THE OPEN SOURCE PROJECT AND ITS AUTHOR. PLEASE BE RESPECTFUL, SPONSOR THIS PROJECT, USE NATIVE APPS IF POSSIBLE.
 
-The official version of [Rdio Scanner](https://github.com/chuot/rdio-scanner) is compiled on a PC using the current version of Fedora Workstation. You should have no problem building on another platform as long as the prerequisites are available and installed.
+The official version of [Ember Scanner](https://github.com/jjcazau/EmberScanner) is compiled on a PC using the current version of Fedora Workstation. You should have no problem building on another platform as long as the prerequisites are available and installed.
 
 ## Install the prerequisites
 
@@ -21,19 +21,19 @@ Your os distribution may have all of the following prerequisites available in it
 
 Clone the official repository on your computer and start the build process.
 
-        git clone https://github.com/chuot/rdio-scanner.git
-        cd rdio-scanner
+        git clone https://github.com/jjcazau/EmberScanner.git
+        cd ember-scanner
         make
 
 When finished, you will find the precompiled versions for various platforms in the `dist` folder.
 
-        rdio-scanner-darwin-amd64-v7.0.0.zip
-        rdio-scanner-darwin-arm64-v7.0.0.zip
-        rdio-scanner-freebsd-amd64-v7.0.0.zip
-        rdio-scanner-linux-386-v7.0.0.zip
-        rdio-scanner-linux-amd64-v7.0.0.zip
-        rdio-scanner-linux-arm64-v7.0.0.zip
-        rdio-scanner-linux-arm-v7.0.0.zip
-        rdio-scanner-windows-amd64-v7.0.0.zip
+        ember-scanner-darwin-amd64-v7.0.0.zip
+        ember-scanner-darwin-arm64-v7.0.0.zip
+        ember-scanner-freebsd-amd64-v7.0.0.zip
+        ember-scanner-linux-386-v7.0.0.zip
+        ember-scanner-linux-amd64-v7.0.0.zip
+        ember-scanner-linux-arm64-v7.0.0.zip
+        ember-scanner-linux-arm-v7.0.0.zip
+        ember-scanner-windows-amd64-v7.0.0.zip
 
-**Happy Rdio scanning !**
+**Happy Ember scanning !**

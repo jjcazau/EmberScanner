@@ -7,10 +7,10 @@
  */
 
 import { Routes } from '@angular/router';
-import { routes as rdioScannerRoutes } from './pages/rdio-scanner';
+import { routes as emberScannerRoutes } from './pages/ember-scanner';
 
 export const routes: Routes = [
-    ...rdioScannerRoutes,
+    ...emberScannerRoutes,
     {
         path: '**',
         pathMatch: 'full',

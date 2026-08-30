@@ -1,0 +1,90 @@
+<form *ngIf="form as f" autocomplete="off" [formGroup]="f" (ngSubmit)="save()">
+  <mat-accordion displayMode="flat">
+    <mat-expansion-panel (afterCollapse)="accessComponent.closeAll()">
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <mat-icon>manage_accounts</mat-icon>
+          Access
+          <mat-icon *ngIf="f.get('access')?.invalid" color="warn">error</mat-icon>
+        </mat-panel-title>
+      </mat-expansion-panel-header>
+      <ember-scanner-admin-access #accessComponent [form]="access"></ember-scanner-admin-access>
+    </mat-expansion-panel>
+    <mat-expansion-panel (afterCollapse)="apikeyComponent.closeAll()">
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <mat-icon>vpn_key</mat-icon>
+          ApiKey
+          <mat-icon *ngIf="f.get('apikey')?.invalid" color="warn">error</mat-icon>
+        </mat-panel-title>
+      </mat-expansion-panel-header>
+      <ember-scanner-admin-apikeys #apikeyComponent [form]="apikeys"></ember-scanner-admin-apikeys>
+    </mat-expansion-panel>
+    <mat-expansion-panel *ngIf="!docker" (afterCollapse)="dirwatchComponent.closeAll()">
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <mat-icon>folder</mat-icon>
+          Dirwatch
+          <mat-icon *ngIf="f.get('dirwatch')?.invalid" color="warn">error</mat-icon>
+        </mat-panel-title>
+      </mat-expansion-panel-header>
+      <ember-scanner-admin-dirwatch #dirwatchComponent [form]="dirwatch"></ember-scanner-admin-dirwatch>
+    </mat-expansion-panel>
+    <mat-expansion-panel (afterCollapse)="downstreamsComponent.closeAll()">
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <mat-icon>share</mat-icon>
+          Downstreams
+          <mat-icon *ngIf="f.get('downstreams')?.invalid" color="warn">error</mat-icon>
+        </mat-panel-title>
+      </mat-expansion-panel-header>
+      <ember-scanner-admin-downstreams #downstreamsComponent [form]="downstreams"></ember-scanner-admin-downstreams>
+    </mat-expansion-panel>
+    <mat-expansion-panel>
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <mat-icon>workspaces</mat-icon>
+          Groups
+          <mat-icon *ngIf="f.get('groups')?.invalid" color="warn">error</mat-icon>
+        </mat-panel-title>
+      </mat-expansion-panel-header>
+      <ember-scanner-admin-groups [form]="groups"></ember-scanner-admin-groups>
+    </mat-expansion-panel>
+    <mat-expansion-panel>
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <mat-icon>tune</mat-icon>
+          Options
+          <mat-icon *ngIf="f.get('options')?.invalid" color="warn">error</mat-icon>
+        </mat-panel-title>
+      </mat-expansion-panel-header>
+      <ember-scanner-admin-options [form]="options"></ember-scanner-admin-options>
+    </mat-expansion-panel>
+    <mat-expansion-panel (afterCollapse)="systemsComponent.closeAll()">
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <mat-icon>podcasts</mat-icon>
+          Systems
+          <mat-icon *ngIf="f.get('systems')?.invalid" color="warn">error</mat-icon>
+        </mat-panel-title>
+      </mat-expansion-panel-header>
+      <ember-scanner-admin-systems #systemsComponent [form]="systems"></ember-scanner-admin-systems>
+    </mat-expansion-panel>
+    <mat-expansion-panel>
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <mat-icon>sell</mat-icon>
+          Tags
+          <mat-icon *ngIf="f.get('tags')?.invalid" color="warn">error</mat-icon>
+        </mat-panel-title>
+      </mat-expansion-panel-header>
+      <ember-scanner-admin-tags [form]="tags"></ember-scanner-admin-tags>
+    </mat-expansion-panel>
+  </mat-accordion>
+  <div class="row bottom">
+    <button type="button" mat-raised-button [disabled]="f.disabled || f.pristine"
+    (click)="reset()">Reset</button>
+    <button type="submit" mat-raised-button color="primary"
+    [disabled]="f.disabled || f.pristine || !f.valid">Save</button>
+  </div>
+</form>

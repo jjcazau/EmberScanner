@@ -1,0 +1,18 @@
+<div>
+  <div>
+    <p>The compatible upstream Rdio Scanner app is available for {{ deviceType }} devices.</p>
+  </div>
+  <div>
+    @if (isAndroid) {
+      <a href="https://play.google.com/store/apps/details?id=solutions.saubeo.rdioScanner" target="_blank">
+        <google-play-badge></google-play-badge>
+      </a>
+    }
+    @if (isApple) {
+      <a href="https://apps.apple.com/us/app/rdio-scanner/id1563065667#?platform=iphone" target="_blank">
+        <app-store-badge></app-store-badge>
+      </a>
+    }
+  </div>
+</div>
+<div class="countdown">{{ countdown }}</div>

@@ -52,7 +52,7 @@ func main() {
 	config := NewConfig()
 
 	if config.newAdminPassword == "" {
-		fmt.Printf("\nRdio Scanner v%s\n", Version)
+		fmt.Printf("\nEmber Scanner v%s\n", Version)
 		fmt.Printf("----------------------------------\n")
 	}
 
@@ -253,7 +253,7 @@ func main() {
 		log.Printf("admin interface at http://%s:%s/admin", hostname, port)
 	}
 
-	log.Println("please consider sponsoring the project at https://github.com/sponsors/chuot")
+	log.Println("project repository: https://github.com/jjcazau/EmberScanner")
 
 	server := newServer(fmt.Sprintf("%s:%s", addr, port), nil)
 

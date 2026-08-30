@@ -4,8 +4,8 @@ services:
   server: 
     environment: 
       - TZ=America/Toronto
-    image: docker.io/chuot/rdio-scanner:latest
+    image: ghcr.io/jjcazau/ember-scanner:latest
     ports:
       - "3000:3000"
     volumes:
-      - /home/radio/rdio-scanner:/app/data:z
+      - /home/radio/ember-scanner:/app/data:z

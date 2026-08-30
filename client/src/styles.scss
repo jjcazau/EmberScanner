@@ -6,30 +6,30 @@
 @include mat.elevation-classes();
 @include mat.app-background();
 
-$rdio-scanner-font-family: Roboto, "Helvetica Neue", sans-serif;
+$ember-scanner-font-family: Roboto, "Helvetica Neue", sans-serif;
 
-$rdio-scanner-primary: mat.m2-define-palette(mat.$m2-grey-palette, 800, 50);
-$rdio-scanner-accent: mat.m2-define-palette(mat.$m2-green-palette);
-$rdio-scanner-warn: mat.m2-define-palette(mat.$m2-red-palette);
-$rdio-scanner-typography: mat.m2-define-typography-config(
-	$font-family: $rdio-scanner-font-family,
+$ember-scanner-primary: mat.m2-define-palette(mat.$m2-grey-palette, 800, 50);
+$ember-scanner-accent: mat.m2-define-palette(mat.$m2-green-palette);
+$ember-scanner-warn: mat.m2-define-palette(mat.$m2-red-palette);
+$ember-scanner-typography: mat.m2-define-typography-config(
+	$font-family: $ember-scanner-font-family,
 );
 
-$rdio-scanner-theme: mat.m2-define-light-theme(
+$ember-scanner-theme: mat.m2-define-light-theme(
 	(
 		color: (
-			primary: $rdio-scanner-primary,
-			accent: $rdio-scanner-accent,
-			warn: $rdio-scanner-warn,
+			primary: $ember-scanner-primary,
+			accent: $ember-scanner-accent,
+			warn: $ember-scanner-warn,
 		),
 	)
 );
 
-@include mat.all-component-themes($rdio-scanner-theme);
-@include mat.all-component-typographies($rdio-scanner-typography);
+@include mat.all-component-themes($ember-scanner-theme);
+@include mat.all-component-typographies($ember-scanner-typography);
 
 body {
-	font-family: $rdio-scanner-font-family;
+	font-family: $ember-scanner-font-family;
 	margin: 0;
 }
 

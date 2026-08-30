@@ -1,7 +1,7 @@
 # WebSocket API Terms of Use
 
 **Effective Date:** January 3rd, 2026
-**Project:** Rdio Scanner open source project
+**Project:** Rdio Scanner open source project (upstream policy retained by Ember Scanner)
 **Sponsor:** Saubeo Solutions
 
 ---

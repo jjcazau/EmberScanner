@@ -64,9 +64,11 @@ type Config struct {
 func NewConfig() *Config {
 	const (
 		defaultAdminUrl         = "/admin"
-		defaultConfigFile       = "rdio-scanner.ini"
+		defaultConfigFile       = "ember-scanner.ini"
 		defaultDbType           = DbTypeSqlite
-		defaultDbFile           = "rdio-scanner.db"
+		defaultDbFile           = "ember-scanner.db"
+		legacyConfigFile        = "rdio-scanner.ini"
+		legacyDbFile            = "rdio-scanner.db"
 		defaultDbHost           = "localhost"
 		defaultDbPortMariaDb    = uint(3306)
 		defaultDbPortPostgreSql = uint(5432)
@@ -86,7 +88,7 @@ func NewConfig() *Config {
 			config.BaseDir = filepath.Dir(exe)
 			if !config.isBaseDirWritable() {
 				if h, err := os.UserHomeDir(); err == nil {
-					config.BaseDir = filepath.Join(h, "Rdio Scanner")
+					config.BaseDir = filepath.Join(h, "Ember Scanner")
 					if _, err := os.Stat(config.BaseDir); os.IsNotExist(err) {
 						os.MkdirAll(config.BaseDir, 0770)
 					}
@@ -114,6 +116,23 @@ func NewConfig() *Config {
 
 	if !config.isBaseDirWritable() {
 		log.Fatalf("no write permissions in %s", config.BaseDir)
+	}
+
+	// Prefer Ember Scanner defaults for new installs, but discover files from an
+	// existing Rdio Scanner deployment when no renamed equivalent exists.
+	if config.ConfigFile == defaultConfigFile {
+		if _, err := os.Stat(config.GetPath(defaultConfigFile)); os.IsNotExist(err) {
+			if _, err := os.Stat(config.GetPath(legacyConfigFile)); err == nil {
+				config.ConfigFile = legacyConfigFile
+			}
+		}
+	}
+	if config.DbFile == defaultDbFile {
+		if _, err := os.Stat(config.GetPath(defaultDbFile)); os.IsNotExist(err) {
+			if _, err := os.Stat(config.GetPath(legacyDbFile)); err == nil {
+				config.DbFile = legacyDbFile
+			}
+		}
 	}
 
 	switch {

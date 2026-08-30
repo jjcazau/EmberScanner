@@ -1,4 +1,4 @@
-module rdio-scanner/server
+module github.com/jjcazau/EmberScanner/server
 
 go 1.26
 

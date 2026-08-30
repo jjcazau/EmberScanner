@@ -31,10 +31,10 @@
     "typescript": "~5.9.3"
   },
   "engines": {
-    "node": ">=16.0"
+    "node": "^20.19.0 || ^22.12.0 || >=24.0.0"
   },
   "license": "LICENSE",
-  "name": "rdio-scanner",
+  "name": "ember-scanner",
   "private": true,
   "scripts": {
     "build": "ng build --base-href ./ --configuration production",

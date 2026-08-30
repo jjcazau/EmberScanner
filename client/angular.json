@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "rdio-scanner": {
+    "ember-scanner": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -15,7 +15,7 @@
       },
       "root": "",
       "sourceRoot": "src",
-      "prefix": "rdio-scanner",
+      "prefix": "ember-scanner",
       "targets": {
         "build": {
           "builder": "@angular-devkit/build-angular:browser",
@@ -75,11 +75,11 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "rdio-scanner:build:production"
+              "buildTarget": "ember-scanner:build:production"
             },
             "development": {
               "proxyConfig": "src/proxy.conf.js",
-              "buildTarget": "rdio-scanner:build:development"
+              "buildTarget": "ember-scanner:build:development"
             }
           },
           "defaultConfiguration": "development"
@@ -87,7 +87,7 @@
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",
           "options": {
-            "buildTarget": "rdio-scanner:build"
+            "buildTarget": "ember-scanner:build"
           }
         },
         "test": {

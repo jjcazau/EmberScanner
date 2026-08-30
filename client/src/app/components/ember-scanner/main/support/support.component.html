@@ -1,0 +1,10 @@
+<span class="support">
+  @if (email) {
+    For further assistance please contact <b><a href="mailto:{{ email }}" target="_blank">{{ email }}</a></b>
+  }
+  @if (!email) {
+    For further assistance please go to <b><a href="https://github.com/jjcazau/EmberScanner/discussions"
+  target="_blank">Ember&nbsp;Scanner&nbsp;discussions</a></b>
+}
+</span>
+<span class="mat-caption countdown">{{ countdown }}</span>

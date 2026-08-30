@@ -1,27 +1,20 @@
-# Guide lines for contributing to [Rdio Scanner](https://github.com/chuot/rdio-scanner)
+# Contributing to Ember Scanner
 
-Please follow these simple guidelines to contribute to [Rdio Scanner](https://github.com/chuot/rdio-scanner). Discuss the change first through [GitHub Discussions](https://github.com/chuot/rdio-scanner/discussions), email, or any other method with the [owner and project manager](https://github.com/chuot).
+Bug reports, feature requests, documentation improvements, and code contributions are welcome.
 
-## Support requests or general question
+## Issues
 
-Support requests or general questions are welcome on the [Rdio Scanner Discussions](https://github.com/chuot/rdio-scanner/discussions). Do not create an issue for this, it will be rejected and closed immediately.
+Search the [existing issues](https://github.com/jjcazau/EmberScanner/issues) before opening a new one. Bug reports should include the affected version, operating system, relevant configuration, logs, and reproducible steps. Feature requests should explain the use case and expected behavior.
 
-## Bugs and feature requests
+## Pull requests
 
-We use [GitHub Issues](https://github.com/chuot/rdio-scanner/issues) to track bugs and feature requests.
+Keep changes focused and explain their purpose and testing in the pull request. For substantial changes, open an issue first so the approach can be discussed.
 
-Open an [issue](https://github.com/chuot/rdio-scanner/issues) that best describes the bug or feature request.
+Before submitting code:
 
-For **bugs**, describe the environment in which you encounter it and explain step by step how to reproduce them.
+```sh
+cd server && go test ./...
+cd ../client && npm ci && npm run build
+```
 
-For **feature requests**, describe the reason and use case.
-
-Most of the time, the issue will be assigned to the [owner and project manager](https://github.com/chuot) and then resolved in a timely manner. In some cases, the issue will be identified as _help needed_ and then assigned to a volonteer contributor. Again, pull requests will be rejected if they are not related to a previously opened and assigned issue.
-
-## Contributor Agreement
-
-By submitting a contribution to this repository, you agree to the terms of the [Individual Contributor Assignment Agreement](./ICAA.md).
-
-## Random Pull Requests
-
-To keep the project stable and well organized, random pull requests will be rejected if no issue have been previously opened and assigned first by the [owner and project manager](https://github.com/chuot).
+Contributions are submitted under the repository's GPL license. Existing upstream copyright notices must be preserved.

@@ -1,3 +1,11 @@
+# Ember Scanner
+
+## Unreleased
+
+- Forked from Rdio Scanner and renamed the application, executable, packages, configuration defaults, and web client to Ember Scanner.
+
+## Upstream Rdio Scanner history
+
 # Change log
 
 ## Version 7.0
@@ -686,3 +694,10 @@ _v4.7.6_
 ## Version 1.0
 
 - First public version.
+# Ember Scanner
+
+## Unreleased
+
+- Forked from Rdio Scanner and renamed the application, executable, packages, configuration defaults, and web client to Ember Scanner.
+
+## Upstream Rdio Scanner history
