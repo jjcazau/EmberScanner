@@ -100,6 +100,8 @@ export class EmberScannerService implements OnDestroy {
         time12hFormat: false,
     };
 
+    private configLoaded = false;
+
     private instanceId = 'default';
 
     private livefeedMap = {} as EmberScannerLivefeedMap;
@@ -926,6 +928,7 @@ export class EmberScannerService implements OnDestroy {
 
                 case WebsocketCommand.Config: {
                     const config = message[1];
+                    const isInitialConfig = !this.configLoaded;
 
                     this.config = {
                         alerts: config.alerts,
@@ -943,9 +946,15 @@ export class EmberScannerService implements OnDestroy {
                         time12hFormat: typeof config.time12hFormat === 'boolean' ? config.time12hFormat : false,
                     };
 
+                    this.configLoaded = true;
+
                     this.rebuildLivefeedMap();
 
-                    if (this.livefeedMode !== EmberScannerLivefeedMode.Playback) {
+                    // Start automatically on first load. Later config broadcasts must
+                    // preserve an intentional offline state; an already-online feed still
+                    // needs to resend its rebuilt subscription map.
+                    if (this.livefeedMode === EmberScannerLivefeedMode.Online
+                        || (isInitialConfig && this.livefeedMode === EmberScannerLivefeedMode.Offline)) {
                         this.startLivefeed();
                     }
 

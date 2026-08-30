@@ -57,6 +57,7 @@ type Config struct {
 	SslCertFile      string
 	SslKeyFile       string
 	SslListen        string
+	TestMode         bool
 	daemon           *Daemon
 	newAdminPassword string
 }
@@ -112,6 +113,7 @@ func NewConfig() *Config {
 	flag.StringVar(&config.SslCertFile, "ssl_cert_file", "", "ssl PEM formated certificate")
 	flag.StringVar(&config.SslKeyFile, "ssl_key_file", "", "ssl PEM formated key")
 	flag.StringVar(&config.SslListen, "ssl_listen", "", "listening address for ssl")
+	flag.BoolVar(&config.TestMode, "test", false, "run with isolated random test data and synthetic audio")
 	flag.Parse()
 
 	if !config.isBaseDirWritable() {
@@ -209,6 +211,14 @@ func NewConfig() *Config {
 			fmt.Printf("unknown database type %s\n", config.DbType)
 			return nil
 		}
+	}
+
+	// Test mode must never write generated fixtures into a configured database.
+	// Keep the database on disk so developers can restart the UI without losing
+	// history, but give it a distinct name and force the local SQLite backend.
+	if config.TestMode {
+		config.DbType = DbTypeSqlite
+		config.DbFile = "ember-scanner-test.db"
 	}
 
 	if *command != "" {

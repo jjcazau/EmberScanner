@@ -84,6 +84,14 @@ func main() {
 		log.Fatal(err)
 	}
 
+	if config.TestMode {
+		testMode := NewTestMode()
+		if err := testMode.Populate(controller); err != nil {
+			log.Fatal(err)
+		}
+		testMode.Start(controller)
+	}
+
 	if h, err := os.Hostname(); err == nil {
 		hostname = h
 	} else {
