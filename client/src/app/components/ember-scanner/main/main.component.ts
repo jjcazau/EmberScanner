@@ -55,7 +55,7 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
     callDate: Date | undefined;
     callError = '0';
     callFrequency: string = this.formatFrequency(0);
-    callHistory: EmberScannerCall[] = new Array<EmberScannerCall>(5);
+    callHistory: EmberScannerCall[] = [];
     callPrevious: EmberScannerCall | undefined;
     callProgress = new Date(0, 0, 0, 0, 0, 0);
     callQueue = 0;
@@ -114,6 +114,19 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
 
     selectedHistoryCallId: number | undefined;
 
+    get visibleCallHistory(): (EmberScannerCall | undefined)[] {
+        const selectedIndex = this.callHistory.findIndex((call) => call.id === this.selectedHistoryCallId);
+        const maxStart = Math.max(0, this.callHistory.length - 5);
+        const start = selectedIndex < 5 ? 0 : Math.min(maxStart, selectedIndex - 2);
+        const rows: (EmberScannerCall | undefined)[] = this.callHistory.slice(start, start + 5);
+
+        while (rows.length < 5) {
+            rows.push(undefined);
+        }
+
+        return rows;
+    }
+
     tempAvoid = 0;
 
     timeFormat = 'HH:mm';
@@ -137,6 +150,14 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
     private dimmerTimer: Subscription | undefined;
 
     private eventSubscription;
+
+    private historyCount = 0;
+
+    private historyLoading = false;
+
+    private historyRequested = false;
+
+    private pendingHistoryIndex: number | undefined;
 
     private pendingPin = '';
 
@@ -333,29 +354,41 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
             return;
         }
 
-        const populatedCalls = this.callHistory.filter((call): call is EmberScannerCall => !!call);
-
-        if (!populatedCalls.length || this.livefeedPaused) {
+        if (this.livefeedPaused) {
             this.emberScannerService.beep(EmberScannerBeepStyle.Denied);
 
             return;
         }
 
-        const currentIndex = populatedCalls.findIndex((call) => call.id === this.selectedHistoryCallId);
+        if (!this.callHistory.length) {
+            this.pendingHistoryIndex = 0;
+            this.requestMoreHistory();
+            return;
+        }
+
+        const currentIndex = this.callHistory.findIndex((call) => call.id === this.selectedHistoryCallId);
         const selectedIndex = currentIndex < 0
             ? 0
-            : Math.max(
-                0,
-                Math.min(populatedCalls.length - 1, currentIndex + direction),
-            );
-        const selectedCall = populatedCalls[selectedIndex];
+            : Math.max(0, currentIndex + direction);
 
-        this.selectedHistoryCallId = selectedCall.id;
+        if (selectedIndex >= this.callHistory.length) {
+            if (this.callHistory.length < this.historyCount) {
+                this.pendingHistoryIndex = selectedIndex;
+                this.requestMoreHistory();
+            } else {
+                this.emberScannerService.beep(EmberScannerBeepStyle.Denied);
+            }
 
-        this.emberScannerService.beep(EmberScannerBeepStyle.Activate);
-        this.emberScannerService.play(selectedCall);
+            return;
+        }
 
-        this.updateDimmer();
+        this.selectHistoryCall(selectedIndex);
+    }
+
+    historyNumber(call: EmberScannerCall | undefined): number | undefined {
+        const index = call ? this.callHistory.findIndex((item) => item.id === call.id) : -1;
+
+        return index >= 0 ? index + 1 : undefined;
     }
 
     showHelp(): void {
@@ -475,6 +508,37 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
             this.pinError = '';
             this.pinPending = false;
             this.pendingPin = '';
+
+            if (!this.historyRequested) {
+                this.requestMoreHistory();
+            }
+        }
+
+        if ('historyList' in event) {
+            const historyList = event.historyList;
+            const incomingCalls = historyList?.results || [];
+            const existingCalls = new Map(this.callHistory.map((call) => [call.id, call]));
+
+            incomingCalls.forEach((call) => {
+                if (!existingCalls.has(call.id)) {
+                    existingCalls.set(call.id, call);
+                }
+            });
+
+            this.callHistory = Array.from(existingCalls.values()).sort((a, b) => {
+                return new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime();
+            });
+            this.historyCount = Math.max(historyList?.count || 0, this.callHistory.length);
+            this.historyLoading = false;
+
+            if (typeof this.pendingHistoryIndex === 'number') {
+                const pendingIndex = this.pendingHistoryIndex;
+                this.pendingHistoryIndex = undefined;
+
+                if (pendingIndex < this.callHistory.length) {
+                    this.selectHistoryCall(pendingIndex);
+                }
+            }
         }
 
         if ('expired' in event && event.expired === true) {
@@ -681,14 +745,15 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
                 this.callUnit = this.call.systemData?.units?.find((u) => u.id === this.call?.source)?.label ?? `${this.call.source ?? ''}`;
             }
 
-            if (
-                this.callPrevious &&
-                this.callPrevious.id !== this.call.id &&
-                !this.callHistory.find((call: EmberScannerCall) => call?.id === this.callPrevious?.id)
-            ) {
-                this.callHistory.pop();
+            if (this.callPrevious && this.callPrevious.id !== this.call.id) {
+                const historyIndex = this.callHistory.findIndex((call) => call.id === this.callPrevious?.id);
 
-                this.callHistory.unshift(this.callPrevious);
+                if (historyIndex >= 0) {
+                    this.callHistory[historyIndex] = this.callPrevious;
+                } else {
+                    this.callHistory.unshift(this.callPrevious);
+                    this.historyCount = Math.max(this.historyCount + 1, this.callHistory.length);
+                }
             }
         }
 
@@ -722,5 +787,30 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
         }
 
         this.ngChangeDetectorRef.detectChanges();
+    }
+
+    private requestMoreHistory(): void {
+        if (this.historyLoading) {
+            return;
+        }
+
+        this.historyLoading = true;
+        this.historyRequested = true;
+        // Overlap the last row so a call arriving during the request cannot
+        // shift offset pagination far enough to leave a gap.
+        this.emberScannerService.searchHistoryCalls(Math.max(0, this.callHistory.length - 1));
+    }
+
+    private selectHistoryCall(index: number): void {
+        const selectedCall = this.callHistory[index];
+
+        if (!selectedCall) {
+            return;
+        }
+
+        this.selectedHistoryCallId = selectedCall.id;
+        this.emberScannerService.beep(EmberScannerBeepStyle.Activate);
+        this.emberScannerService.loadAndPlayHistory(selectedCall.id);
+        this.updateDimmer();
     }
 }

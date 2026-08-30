@@ -93,6 +93,9 @@
       <thead>
         <tr>
           <th>
+            <span>#</span>
+          </th>
+          <th>
             <span>Time</span>
           </th>
           <th>
@@ -107,11 +110,14 @@
         </tr>
       </thead>
       <tbody>
-        @for (previousCall of callHistory; track $index) {
+        @for (previousCall of visibleCallHistory; track $index) {
           <tr [ngClass]="{
             'replaying': previousCall?.id !== null && previousCall?.id === call?.id,
             'selected': previousCall?.id === selectedHistoryCallId
           }">
+            <td>
+              <span>{{ historyNumber(previousCall) }}</span>
+            </td>
             <td>
               <span>{{ previousCall?.dateTime | date:timeFormat }}</span>
             </td>

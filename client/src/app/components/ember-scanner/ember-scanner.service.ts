@@ -48,6 +48,7 @@ declare global {
 
 enum WebsocketCallFlag {
     Download = 'd',
+    History = 'h',
     Play = 'p',
 }
 
@@ -116,6 +117,7 @@ export class EmberScannerService implements OnDestroy {
     private playbackPending: number | undefined;
     private playbackRefreshing = false;
     private playbackSearchAppend = false;
+    private historyPlaybackPending: number | undefined;
 
     private skipDelay: Subscription | undefined;
 
@@ -441,6 +443,20 @@ export class EmberScannerService implements OnDestroy {
         this.getCall(id, WebsocketCallFlag.Play);
     }
 
+    loadAndPlayHistory(id: number): void {
+        if (!id) {
+            return;
+        }
+
+        if (this.skipDelay) {
+            this.skipDelay.unsubscribe();
+            this.skipDelay = undefined;
+        }
+
+        this.historyPlaybackPending = id;
+        this.getCall(id, WebsocketCallFlag.History);
+    }
+
     ngOnDestroy(): void {
         this.closeWebsocket();
 
@@ -581,6 +597,14 @@ export class EmberScannerService implements OnDestroy {
         this.playbackSearchAppend = settings?.append === true;
 
         this.sendtoWebsocket(WebsocketCommand.ListCall, options);
+    }
+
+    searchHistoryCalls(offset = 0, limit = 30): void {
+        this.sendtoWebsocket(WebsocketCommand.ListCall, {
+            limit,
+            offset,
+            sort: -1,
+        }, WebsocketCallFlag.History);
     }
 
     skip(options?: { delay?: boolean }): void {
@@ -914,6 +938,12 @@ export class EmberScannerService implements OnDestroy {
                         if (flag === WebsocketCallFlag.Download) {
                             this.download(message[1]);
 
+                        } else if (flag === WebsocketCallFlag.History) {
+                            if (call.id === this.historyPlaybackPending) {
+                                this.historyPlaybackPending = undefined;
+                                this.play(this.transformCall(call));
+                            }
+
                         } else if (flag === WebsocketCallFlag.Play && call.id === this.playbackPending) {
                             this.playbackPending = undefined;
 
@@ -975,7 +1005,18 @@ export class EmberScannerService implements OnDestroy {
 
                     break;
 
-                case WebsocketCommand.ListCall:
+                case WebsocketCommand.ListCall: {
+                    if (message[2] === WebsocketCallFlag.History) {
+                        const historyList: EmberScannerPlaybackList | undefined = message[1];
+
+                        if (historyList) {
+                            historyList.results = historyList.results.map((call) => this.transformCall(call));
+                        }
+
+                        this.event.emit({ historyList });
+                        break;
+                    }
+
                     const previousPlaybackList = this.playbackList;
                     const incomingPlaybackList: EmberScannerPlaybackList | undefined = message[1];
 
@@ -1010,6 +1051,7 @@ export class EmberScannerService implements OnDestroy {
                     }
 
                     break;
+                }
 
                 case WebsocketCommand.ListenersCount:
                     this.event.emit({ listeners: message[1] });

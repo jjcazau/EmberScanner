@@ -438,7 +438,7 @@ func (controller *Controller) ProcessMessageCommandListCall(client *Client, mess
 	case map[string]any:
 		searchOptions := NewCallSearchOptions().fromMap(v)
 		if searchResults, err := controller.Calls.Search(searchOptions, client); err == nil {
-			client.Send <- &Message{Command: MessageCommandListCall, Payload: searchResults}
+			client.Send <- &Message{Command: MessageCommandListCall, Payload: searchResults, Flag: message.Flag}
 		} else {
 			return fmt.Errorf("controller.processmessage.commandlistcall: %v", err)
 		}

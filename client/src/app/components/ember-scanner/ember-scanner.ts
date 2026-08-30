@@ -116,6 +116,7 @@ export interface EmberScannerEvent {
     expired?: boolean;
     holdSys?: boolean;
     holdTg?: boolean;
+    historyList?: EmberScannerPlaybackList;
     linked?: boolean;
     locked?: boolean;
     listeners?: number;
