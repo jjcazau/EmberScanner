@@ -317,6 +317,8 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
             if (!this.livefeedPaused && (this.call || this.callPrevious)) {
                 this.emberScannerService.beep(EmberScannerBeepStyle.Activate);
 
+                this.selectedHistoryCallId = this.callHistory[0]?.id;
+
                 if (this.replayTimer instanceof Subscription) {
                     this.replayTimer.unsubscribe();
                     this.replayOffset = Math.min(this.callHistory.length, this.replayOffset + 1);
@@ -485,7 +487,24 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
             }
 
             if (event.call) {
-                this.call = event.call;
+                const incomingCall = event.call;
+
+                this.call = incomingCall;
+
+                const historyIndex = this.callHistory.findIndex((call) => call.id === incomingCall.id);
+
+                if (historyIndex >= 0) {
+                    this.callHistory[historyIndex] = incomingCall;
+                } else {
+                    this.callHistory.unshift(incomingCall);
+                    this.historyCount = Math.max(this.historyCount + 1, this.callHistory.length);
+
+                    const selectedIndex = this.callHistory.findIndex((call) => call.id === this.selectedHistoryCallId);
+
+                    if (selectedIndex === 5) {
+                        this.selectedHistoryCallId = undefined;
+                    }
+                }
 
                 this.updateDimmer();
             }
@@ -745,16 +764,6 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
                 this.callUnit = this.call.systemData?.units?.find((u) => u.id === this.call?.source)?.label ?? `${this.call.source ?? ''}`;
             }
 
-            if (this.callPrevious && this.callPrevious.id !== this.call.id) {
-                const historyIndex = this.callHistory.findIndex((call) => call.id === this.callPrevious?.id);
-
-                if (historyIndex >= 0) {
-                    this.callHistory[historyIndex] = this.callPrevious;
-                } else {
-                    this.callHistory.unshift(this.callPrevious);
-                    this.historyCount = Math.max(this.historyCount + 1, this.callHistory.length);
-                }
-            }
         }
 
         const call = this.call || this.callPrevious;
