@@ -40,7 +40,7 @@ import { routes } from './app.routes';
         BrowserModule,
         ServiceWorkerModule.register('ngsw-worker.js', {
             enabled: environment.production,
-            registrationStrategy: 'registerWhenStable:30000',
+            registrationStrategy: 'registerWhenStable:10000',
         }),
     ],
 })

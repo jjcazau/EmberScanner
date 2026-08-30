@@ -17,9 +17,8 @@
  * ****************************************************************************
  */
 
-import { ChangeDetectorRef, Component, OnDestroy, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, OnDestroy, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
-import { MatPaginator } from '@angular/material/paginator';
 import { BehaviorSubject } from 'rxjs';
 import {
     EmberScannerCall,
@@ -39,11 +38,13 @@ import { EmberScannerService } from '../ember-scanner.service';
     templateUrl: './search.component.html',
     standalone: false
 })
-export class EmberScannerSearchComponent implements OnDestroy {
+export class EmberScannerSearchComponent implements AfterViewInit, OnDestroy {
     call: EmberScannerCall | undefined;
     callPending: number | undefined;
 
     form: FormGroup;
+
+    filtersExpanded = false;
 
     livefeedOnline = false;
     livefeedPlayback = false;
@@ -57,20 +58,32 @@ export class EmberScannerSearchComponent implements OnDestroy {
 
     paused = false;
 
-    results = new BehaviorSubject(new Array<EmberScannerCall | null>(10));
+    hasMoreResults = true;
+
+    results = new BehaviorSubject<EmberScannerCall[]>([]);
     resultsPending = false;
 
     time12h = false;
+
+    get activeFilterCount(): number {
+        const value = this.form.getRawValue();
+
+        return [value.date, value.group, value.system, value.tag, value.talkgroup, value.unit]
+            .filter((filter, index) => index === 0 ? !!filter : typeof filter === 'number' && filter >= 0)
+            .length;
+    }
 
     private config: EmberScannerConfig | undefined;
 
     private eventSubscription;
 
-    private limit = 200;
+    private intersectionObserver: IntersectionObserver | undefined;
+
+    private limit = 30;
 
     private offset = 0;
 
-    @ViewChild(MatPaginator, { read: MatPaginator }) private paginator: MatPaginator | undefined;
+    @ViewChild('loadMoreTrigger', { read: ElementRef }) private loadMoreTrigger: ElementRef<HTMLElement> | undefined;
 
     constructor(
         private emberScannerService: EmberScannerService,
@@ -107,14 +120,37 @@ export class EmberScannerSearchComponent implements OnDestroy {
             this.emberScannerService.stopPlaybackMode();
         }
 
-        this.paginator?.firstPage();
-
         this.refreshFilters();
 
         this.searchCalls();
     }
 
+    loadMoreResults(): void {
+        if (!this.resultsPending && this.hasMoreResults && !this.livefeedPlayback) {
+            this.searchCalls(this.results.value.length > 0);
+        }
+    }
+
+    ngAfterViewInit(): void {
+        if (typeof IntersectionObserver === 'undefined' || !this.loadMoreTrigger) {
+            return;
+        }
+
+        this.intersectionObserver = new IntersectionObserver((entries) => {
+            if (entries.some((entry) => entry.isIntersecting)) {
+                this.loadMoreResults();
+            }
+        }, {
+            rootMargin: '240px 0px',
+            threshold: 0,
+        });
+
+        this.observeLoadMoreTrigger();
+    }
+
     ngOnDestroy(): void {
+        this.intersectionObserver?.disconnect();
+
         this.eventSubscription.unsubscribe();
     }
 
@@ -192,29 +228,6 @@ export class EmberScannerSearchComponent implements OnDestroy {
         });
     }
 
-    refreshResults(): void {
-        if (!this.paginator) {
-            return;
-        }
-
-        const from = this.paginator.pageIndex * this.paginator.pageSize;
-
-        const to = this.paginator.pageIndex * this.paginator.pageSize + this.paginator.pageSize - 1;
-
-        if (!this.callPending && (from >= this.offset + this.limit || from < this.offset)) {
-            this.searchCalls();
-
-        } else if (this.playbackList) {
-            const calls: Array<EmberScannerCall | null> = this.playbackList.results.slice(from % this.limit, to % this.limit + 1);
-
-            while (calls.length < this.results.value.length) {
-                calls.push(null);
-            }
-
-            this.results.next(calls);
-        }
-    }
-
     resetForm(): void {
         this.form.reset({
             date: null,
@@ -226,21 +239,26 @@ export class EmberScannerSearchComponent implements OnDestroy {
             unit: -1,
         });
 
-        this.paginator?.firstPage();
-
         this.formChangeHandler();
+
+        this.filtersExpanded = false;
     }
 
-    searchCalls(): void {
-        if (this.livefeedPlayback) {
+    toggleFilters(): void {
+        this.filtersExpanded = !this.filtersExpanded;
+    }
+
+    searchCalls(append = false): void {
+        if (this.livefeedPlayback || this.resultsPending || (append && !this.hasMoreResults)) {
             return;
         }
 
-        const pageIndex = this.paginator?.pageIndex || 0;
-
-        const pageSize = this.paginator?.pageSize || 0;
-
-        this.offset = Math.floor((pageIndex * pageSize) / this.limit) * this.limit;
+        if (!append) {
+            this.offset = 0;
+            this.hasMoreResults = true;
+            this.playbackList = undefined;
+            this.results.next([]);
+        }
 
         const options: EmberScannerSearchOptions = {
             limit: this.limit,
@@ -284,11 +302,15 @@ export class EmberScannerSearchComponent implements OnDestroy {
             }
         }
 
+        if ((this.form.get('unit')?.value ?? -1) >= 0) {
+            options.unit = this.form.get('unit')?.value;
+        }
+
         this.resultsPending = true;
 
         this.form.disable();
 
-        this.emberScannerService.searchCalls(options);
+        this.emberScannerService.searchCalls(options, { append });
     }
 
     stop(): void {
@@ -305,17 +327,6 @@ export class EmberScannerSearchComponent implements OnDestroy {
             this.call = event.call;
 
             if (this.callPending) {
-                const index = this.results.value.findIndex((call) => call?.id === this.callPending);
-
-                if (index === -1) {
-                    if (this.form.get('sort')?.value === -1) {
-                        this.paginator?.previousPage();
-
-                    } else {
-                        this.paginator?.nextPage();
-                    }
-                }
-
                 this.callPending = undefined;
             }
         }
@@ -341,11 +352,17 @@ export class EmberScannerSearchComponent implements OnDestroy {
         if ('playbackList' in event) {
             this.playbackList = event.playbackList;
 
-            this.refreshResults();
+            const loadedResults = this.playbackList?.results || [];
+
+            this.results.next(loadedResults);
+            this.offset = loadedResults.length;
+            this.hasMoreResults = loadedResults.length < (this.playbackList?.count || 0);
 
             this.resultsPending = false;
 
             this.form.enable();
+
+            setTimeout(() => this.observeLoadMoreTrigger());
         }
 
         if ('playbackPending' in event) {
@@ -377,5 +394,12 @@ export class EmberScannerSearchComponent implements OnDestroy {
         return system
             ? system.talkgroups.find((talkgroup) => talkgroup.label === this.optionsTalkgroup[this.form.get('talkgroup')?.value ?? -1])
             : undefined;
+    }
+
+    private observeLoadMoreTrigger(): void {
+        if (this.intersectionObserver && this.loadMoreTrigger) {
+            this.intersectionObserver.unobserve(this.loadMoreTrigger.nativeElement);
+            this.intersectionObserver.observe(this.loadMoreTrigger.nativeElement);
+        }
     }
 }

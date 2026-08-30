@@ -60,6 +60,7 @@ enum WebsocketCommand {
     LivefeedMap = 'LFM',
     Max = 'MAX',
     Pin = 'PIN',
+    PinLocked = 'LCK',
     Version = 'VER',
 }
 
@@ -73,8 +74,12 @@ export class EmberScannerService implements OnDestroy {
 
     private audioContext: AudioContext | undefined;
 
+    private audioGain: GainNode | undefined;
+
     private audioSource: AudioBufferSourceNode | undefined;
     private audioSourceStartTime = NaN;
+
+    private volumeLevel = 1;
 
     private call: EmberScannerCall | undefined;
     private callPrevious: EmberScannerCall | undefined;
@@ -108,6 +113,7 @@ export class EmberScannerService implements OnDestroy {
     private playbackList: EmberScannerPlaybackList | undefined;
     private playbackPending: number | undefined;
     private playbackRefreshing = false;
+    private playbackSearchAppend = false;
 
     private skipDelay: Subscription | undefined;
 
@@ -234,9 +240,23 @@ export class EmberScannerService implements OnDestroy {
     }
 
     async beep(style = EmberScannerBeepStyle.Activate): Promise<void> {
-        const seq = this.config.keypadBeeps && this.config.keypadBeeps[style];
+        const configuredSequence = this.config.keypadBeeps?.[style];
+        const fallbackSequences: Record<EmberScannerBeepStyle, EmberScannerOscillatorData[]> = {
+            [EmberScannerBeepStyle.Activate]: [
+                { begin: 0, end: .05, frequency: 1200, type: 'square' },
+            ],
+            [EmberScannerBeepStyle.Deactivate]: [
+                { begin: 0, end: .06, frequency: 1200, type: 'square' },
+                { begin: .06, end: .12, frequency: 925, type: 'square' },
+            ],
+            [EmberScannerBeepStyle.Denied]: [
+                { begin: 0, end: .05, frequency: 925, type: 'square' },
+                { begin: .08, end: .13, frequency: 925, type: 'square' },
+            ],
+        };
+        const seq = configuredSequence?.length ? configuredSequence : fallbackSequences[style];
 
-        if (seq) await this.playOscillatorSequence(seq);
+        await this.playOscillatorSequence(seq);
     }
 
     clearPin(): void {
@@ -440,8 +460,21 @@ export class EmberScannerService implements OnDestroy {
         this.event.emit({ pause: this.livefeedPaused });
     }
 
+    cycleVolume(): number {
+        const levels = [1, .75, .5, .25, 0];
+        const currentIndex = levels.indexOf(this.volumeLevel);
+
+        this.volumeLevel = levels[(currentIndex + 1) % levels.length];
+
+        if (this.audioGain) {
+            this.audioGain.gain.value = this.volumeLevel;
+        }
+
+        return this.volumeLevel;
+    }
+
     play(call?: EmberScannerCall | undefined): void {
-        if (this.livefeedPaused || this.skipDelay) {
+        if (!this.audioContext || this.livefeedPaused || this.skipDelay) {
             return;
 
         } else if (call?.audio) {
@@ -482,7 +515,7 @@ export class EmberScannerService implements OnDestroy {
 
             this.audioSource = this.audioContext.createBufferSource();
             this.audioSource.buffer = buffer;
-            this.audioSource.connect(this.audioContext.destination);
+            this.audioSource.connect(this.audioGain || this.audioContext.destination);
             this.audioSource.onended = () => this.skip({ delay: true });
             this.audioSource.start();
 
@@ -518,7 +551,7 @@ export class EmberScannerService implements OnDestroy {
             this.callQueue.push(call);
         }
 
-        if (this.audioSource || this.call || this.livefeedPaused || this.skipDelay) {
+        if (!this.audioContext || this.audioSource || this.call || this.livefeedPaused || this.skipDelay) {
             this.event.emit({
                 queue: this.livefeedMode === EmberScannerLivefeedMode.Online ? this.callQueue.length : this.getPlaybackQueueCount(),
             });
@@ -542,7 +575,9 @@ export class EmberScannerService implements OnDestroy {
         window?.localStorage?.setItem(EmberScannerService.LOCAL_STORAGE_KEY_PIN, window.btoa(pin));
     }
 
-    searchCalls(options: EmberScannerSearchOptions): void {
+    searchCalls(options: EmberScannerSearchOptions, settings?: { append?: boolean }): void {
+        this.playbackSearchAppend = settings?.append === true;
+
         this.sendtoWebsocket(WebsocketCommand.ListCall, options);
     }
 
@@ -700,6 +735,10 @@ export class EmberScannerService implements OnDestroy {
         const bootstrap = async () => {
             if (!this.audioContext) {
                 this.audioContext = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'playback' });
+
+                this.audioGain = this.audioContext.createGain();
+                this.audioGain.gain.value = this.volumeLevel;
+                this.audioGain.connect(this.audioContext.destination);
             }
 
             if (!this.oscillatorContext) {
@@ -734,6 +773,8 @@ export class EmberScannerService implements OnDestroy {
 
             if (this.audioContext && this.oscillatorContext) {
                 events.forEach((event) => document.body.removeEventListener(event, bootstrap));
+
+                this.play();
             }
         };
 
@@ -904,7 +945,7 @@ export class EmberScannerService implements OnDestroy {
 
                     this.rebuildLivefeedMap();
 
-                    if (this.livefeedMode === EmberScannerLivefeedMode.Online) {
+                    if (this.livefeedMode !== EmberScannerLivefeedMode.Playback) {
                         this.startLivefeed();
                     }
 
@@ -926,7 +967,28 @@ export class EmberScannerService implements OnDestroy {
                     break;
 
                 case WebsocketCommand.ListCall:
-                    this.playbackList = message[1];
+                    const previousPlaybackList = this.playbackList;
+                    const incomingPlaybackList: EmberScannerPlaybackList | undefined = message[1];
+
+                    this.playbackList = incomingPlaybackList;
+
+                    if (this.playbackSearchAppend && previousPlaybackList && incomingPlaybackList) {
+                        const existingIds = new Set(previousPlaybackList.results.map((call) => call.id));
+                        const appendedResults = incomingPlaybackList.results.filter((call) => !existingIds.has(call.id));
+                        const results = previousPlaybackList.results.concat(appendedResults);
+
+                        this.playbackList = {
+                            ...incomingPlaybackList,
+                            options: {
+                                ...incomingPlaybackList.options,
+                                limit: results.length,
+                                offset: 0,
+                            },
+                            results,
+                        };
+                    }
+
+                    this.playbackSearchAppend = false;
 
                     if (this.playbackList) {
                         this.playbackList.results = this.playbackList.results.map((call) => this.transformCall(call));
@@ -952,6 +1014,15 @@ export class EmberScannerService implements OnDestroy {
 
                 case WebsocketCommand.Pin:
                     this.event.emit({ auth: true });
+
+                    break;
+
+                case WebsocketCommand.PinLocked:
+                    this.event.emit({
+                        auth: true,
+                        locked: true,
+                        retryAfter: typeof message[1] === 'number' ? message[1] : undefined,
+                    });
 
                     break;
 
@@ -1087,7 +1158,7 @@ export class EmberScannerService implements OnDestroy {
 
             const gn = context.createGain();
 
-            gn.gain.value = .1;
+            gn.gain.value = .1 * this.volumeLevel;
 
             gn.connect(context.destination);
 

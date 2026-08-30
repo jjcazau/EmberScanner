@@ -117,6 +117,7 @@ export interface EmberScannerEvent {
     holdSys?: boolean;
     holdTg?: boolean;
     linked?: boolean;
+    locked?: boolean;
     listeners?: number;
     livefeedMode?: EmberScannerLivefeedMode;
     map?: EmberScannerLivefeedMap;
@@ -124,6 +125,7 @@ export interface EmberScannerEvent {
     playbackList?: EmberScannerPlaybackList;
     playbackPending?: number;
     queue?: number;
+    retryAfter?: number;
     time?: number;
     tooMany?: boolean;
 }

@@ -41,6 +41,7 @@ type Options struct {
 	Email                       string `json:"email"`
 	KeypadBeeps                 string `json:"keypadBeeps"`
 	MaxClients                  uint   `json:"maxClients"`
+	MaxPinAttempts              uint   `json:"maxPinAttempts"`
 	PlaybackGoesLive            bool   `json:"playbackGoesLive"`
 	PruneDays                   uint   `json:"pruneDays"`
 	ShowListenersCount          bool   `json:"showListenersCount"`
@@ -137,6 +138,13 @@ func (options *Options) FromMap(m map[string]any) *Options {
 		options.MaxClients = defaults.options.maxClients
 	}
 
+	switch v := m["maxPinAttempts"].(type) {
+	case float64:
+		options.MaxPinAttempts = uint(v)
+	default:
+		options.MaxPinAttempts = defaults.options.maxPinAttempts
+	}
+
 	switch v := m["playbackGoesLive"].(type) {
 	case bool:
 		options.PlaybackGoesLive = v
@@ -199,6 +207,7 @@ func (options *Options) Read(db *Database) error {
 	options.DuplicateDetectionTimeFrame = defaults.options.duplicateDetectionTimeFrame
 	options.KeypadBeeps = defaults.options.keypadBeeps
 	options.MaxClients = defaults.options.maxClients
+	options.MaxPinAttempts = defaults.options.maxPinAttempts
 	options.PlaybackGoesLive = defaults.options.playbackGoesLive
 	options.PruneDays = defaults.options.pruneDays
 	options.ShowListenersCount = defaults.options.showListenersCount
@@ -308,6 +317,13 @@ func (options *Options) Read(db *Database) error {
 					options.MaxClients = uint(v)
 				}
 			}
+		case "maxPinAttempts":
+			if err = json.Unmarshal([]byte(value.String), &f); err == nil {
+				switch v := f.(type) {
+				case float64:
+					options.MaxPinAttempts = uint(v)
+				}
+			}
 		case "playbackGoesLive":
 			if err = json.Unmarshal([]byte(value.String), &f); err == nil {
 				switch v := f.(type) {
@@ -407,6 +423,7 @@ func (options *Options) Write(db *Database) error {
 	set("email", options.Email)
 	set("keypadBeeps", options.KeypadBeeps)
 	set("maxClients", options.MaxClients)
+	set("maxPinAttempts", options.MaxPinAttempts)
 	set("playbackGoesLive", options.PlaybackGoesLive)
 	set("pruneDays", options.PruneDays)
 	set("secret", options.secret)

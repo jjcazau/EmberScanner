@@ -1,3 +1,7 @@
+@if (auth) {
+  <ember-scanner-pin [branding]="branding" [busy]="pinPending" [error]="pinError"
+    (pinChange)="clearPinError()" (pinSubmit)="authenticate($event)"></ember-scanner-pin>
+} @else {
 <div class="ember-status">
   <div class="branding">{{ branding }}</div>
   <div class="led" [ngClass]="ledStyle"></div>
@@ -12,11 +16,11 @@
         <span>NO LINK</span>
       }
       @if (linked && showListenersCount) {
-        <span>L: {{ listeners }}</span>
+        <span>Listeners: {{ listeners }}</span>
       }
     </div>
     <div>
-      <span>Q: {{ callQueue }}</span>
+      <span>Calls Waiting: {{ callQueue }}</span>
     </div>
   </div>
   <div class="row small"></div>
@@ -46,7 +50,7 @@
   </div>
   <div class="row">
     <div>
-      <span>F: {{ callFrequency || 0 }}</span>
+      <span>Freq: {{ callFrequency || 0 }}</span>
     </div>
     <div></div>
     <div>
@@ -55,7 +59,7 @@
   </div>
   <div class="row">
     <div>
-      <span>E: {{ callError || 0 }} S: {{ callSpike || 0 }} </span>
+      <span>Errors: {{ callError || 0 }} Spike: {{ callSpike || 0 }} </span>
     </div>
     <div></div>
     <div>
@@ -85,24 +89,6 @@
     </div>
   </div>
   <div class="wrapper">
-    <div class="auth" [ngClass]="{ visible: auth }">
-      <form class="mat-elevation-z8" autocomplete="off" [formGroup]="authForm" (ngSubmit)="authenticate()">
-        <mat-form-field>
-          <input #password matInput type="password" autocomplete="off" formControlName="password"
-            placeholder="Unlock code" (blur)="authFocus()">
-          @if (authForm.get('password')?.hasError('expired')) {
-            <mat-error>
-              This unlock code has expired
-            </mat-error>
-          }
-          @if (authForm.get('password')?.hasError('tooMany')) {
-            <mat-error>
-              Too many connections
-            </mat-error>
-          }
-        </mat-form-field>
-      </form>
-    </div>
     <table class="history">
       <thead>
         <tr>
@@ -122,8 +108,10 @@
       </thead>
       <tbody>
         @for (previousCall of callHistory; track $index) {
-          <tr
-            [ngClass]="{ 'replaying': previousCall?.id !== null && previousCall?.id === call?.id} ">
+          <tr [ngClass]="{
+            'replaying': previousCall?.id !== null && previousCall?.id === call?.id,
+            'selected': previousCall?.id === selectedHistoryCallId
+          }">
             <td>
               <span>{{ previousCall?.dateTime | date:timeFormat }}</span>
             </td>
@@ -149,12 +137,12 @@
       LIVE<br>FEED
     </button>
     <div class="spacer"></div>
-    <button class="ember-button" (click)="holdSystem()" [ngClass]="{ off: !holdSys, on: holdSys }">
-      HOLD<br>SYS
+    <button class="ember-button" (click)="holdTalkgroup()" [ngClass]="{ off: !holdTg, on: holdTg }">
+      HOLD<br>TALKGROUP
     </button>
     <div class="spacer"></div>
-    <button class="ember-button" (click)="holdTalkgroup()" [ngClass]="{ off: !holdTg, on: holdTg }">
-      HOLD<br>TG
+    <button class="ember-button icon-button" (click)="playHistory(-1)" aria-label="Play the recording above">
+      <mat-icon>arrow_upward</mat-icon>
     </button>
   </div>
   <div class="row">
@@ -162,32 +150,38 @@
       REPLAY<br>LAST
     </button>
     <div class="spacer"></div>
-    <button class="ember-button" (click)="skip()">
-      SKIP<br>NEXT
-    </button>
-    <div class="spacer"></div>
     <button class="ember-button" (click)="avoid()">
       AVOID
+    </button>
+    <div class="spacer"></div>
+    <button class="ember-button icon-button" (click)="playHistory(1)" aria-label="Play the recording below">
+      <mat-icon>arrow_downward</mat-icon>
     </button>
   </div>
   <div class="row">
     <button class="ember-button" (click)="showSearchPanel()">
-      SEARCH<br>CALL
+      SEARCH
     </button>
     <div class="spacer"></div>
-    <button class="ember-button" (click)="pause()" [ngClass]="{ off: !livefeedPaused, on: livefeedPaused }">
-      PAUSE
+    <button class="ember-button" (click)="cycleVolume()" [attr.aria-label]="'Volume ' + volumeLevel + ' percent'">
+      VOLUME<br>{{ volumeLevel ? volumeLevel + '%' : 'MUTED' }}
     </button>
     <div class="spacer"></div>
-    <button class="ember-button" (click)="showSelectPanel()">
-      SELECT<br>TG
+    <button class="ember-button icon-button" (click)="toggleFullscreenButton()" aria-label="Toggle fullscreen">
+      <mat-icon>fullscreen</mat-icon>
     </button>
   </div>
 </div>
+<hr class="talkgroup-divider">
+<section class="talkgroups" aria-labelledby="talkgroups-heading">
+  <h2 id="talkgroups-heading">Talkgroups</h2>
+  <ember-scanner-select></ember-scanner-select>
+</section>
 @if (email) {
   <div class="ember-help">
     <button mat-icon-button (click)="showHelp()">
       <mat-icon>help_center</mat-icon>
     </button>
   </div>
+}
 }

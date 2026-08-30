@@ -1,0 +1,37 @@
+<section class="pin-panel" aria-labelledby="pin-heading">
+  <div class="pin-branding">{{ branding || 'EMBER SCANNER' }}</div>
+
+  <div class="pin-display" [class.error]="error || localError" [class.pending]="busy"
+    role="status" aria-live="polite">
+    <h1 id="pin-heading">ACCESS CODE</h1>
+    <div #codeDisplay class="pin-code" [attr.aria-label]="code ? 'Entered code ' + code : 'No code entered'">
+      {{ code || '—' }}
+    </div>
+    <div class="pin-message">{{ message }}</div>
+  </div>
+
+  <div class="pin-keypad" aria-label="Numeric access code keypad">
+    @for (digit of digits; track digit) {
+      <button class="ember-button pin-key" type="button" [disabled]="busy"
+        (click)="append(digit)" [attr.aria-label]="'Digit ' + digit">
+        {{ digit }}
+      </button>
+    }
+    <button class="ember-button pin-key pin-action" type="button" [disabled]="busy"
+      (click)="clear()" aria-label="Clear code">
+      CLEAR
+    </button>
+    <button class="ember-button pin-key" type="button" [disabled]="busy"
+      (click)="append(0)" aria-label="Digit 0">
+      0
+    </button>
+    <button class="ember-button pin-key pin-icon" type="button" [disabled]="busy"
+      (click)="backspace()" aria-label="Delete last digit">
+      <mat-icon>backspace</mat-icon>
+    </button>
+    <button class="ember-button pin-enter" type="button" [disabled]="busy"
+      (click)="enter()">
+      {{ busy ? 'CHECKING…' : 'ENTER' }}
+    </button>
+  </div>
+</section>

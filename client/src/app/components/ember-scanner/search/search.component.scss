@@ -10,6 +10,35 @@
   padding: 1rem;
 }
 
+.filter-toggle {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+
+  button {
+    border-color: rgba(255, 255, 255, 0.72);
+    color: rgb(255, 255, 255);
+    min-width: 132px;
+  }
+
+  .filter-count {
+    align-items: center;
+    background: rgb(45, 45, 45);
+    border-radius: 50%;
+    color: rgb(255, 255, 255);
+    display: inline-flex;
+    font-size: 11px;
+    height: 20px;
+    justify-content: center;
+    margin-left: 6px;
+    min-width: 20px;
+  }
+}
+
+.ember-filters {
+  margin-bottom: 16px;
+}
+
 .ember-filters form {
   display: flex;
   flex-direction: row;
@@ -81,12 +110,34 @@
     padding: 0 8px;
   }
 
-  .paginator {
+  .results-footer {
     align-items: center;
     display: flex;
     flex-direction: row;
     justify-content: space-between;
-    padding-left: 8px;
+    min-height: 48px;
+    padding: 0 12px;
+
+    > span {
+      color: rgba(0, 0, 0, 0.62);
+      font-size: 12px;
+      text-align: right;
+    }
+  }
+
+  .load-more {
+    align-items: center;
+    color: rgba(0, 0, 0, 0.62);
+    display: flex;
+    font-size: 12px;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 12px;
+    text-align: center;
+
+    &[role="button"] {
+      cursor: pointer;
+    }
   }
 
   .spin {
@@ -108,8 +159,83 @@
 }
 
 @media (max-width: 459px) {
+  :host {
+    padding: 0;
+  }
+
+  .ember-filters,
+  .ember-list {
+    border-left: 0;
+    border-radius: 0;
+    border-right: 0;
+  }
+
+  .filter-toggle {
+    margin: 8px 12px;
+
+    button {
+      width: 100%;
+    }
+  }
+
+  .ember-filters {
+    padding: 12px;
+  }
+
   .ember-filters form .mat-mdc-form-field {
     flex: 100%;
+  }
+
+  .ember-list {
+    .mat-mdc-header-row {
+      display: none;
+    }
+
+    .mat-mdc-row {
+      display: block;
+      min-height: 0;
+      padding: 12px 56px 12px 12px;
+      position: relative;
+    }
+
+    .mat-mdc-cell {
+      align-items: center;
+      display: grid;
+      flex: none !important;
+      grid-template-columns: 76px minmax(0, 1fr);
+      min-height: 26px;
+      padding: 0 !important;
+      width: 100%;
+
+      &::before {
+        color: rgba(0, 0, 0, 0.56);
+        content: attr(data-label);
+        font-size: 11px;
+        font-weight: 500;
+        padding-right: 8px;
+        text-transform: uppercase;
+      }
+
+      &:first-of-type {
+        display: flex;
+        min-height: 48px;
+        position: absolute;
+        right: 4px;
+        top: calc(50% - 24px);
+        width: 48px;
+
+        &::before {
+          display: none;
+        }
+      }
+    }
+
+    .results-footer {
+      position: sticky;
+      bottom: 0;
+      background: rgb(255, 255, 255);
+      z-index: 1;
+    }
   }
 }
 

@@ -44,6 +44,20 @@ func NewAccess() *Access {
 	return &Access{}
 }
 
+func isNumericAccessCode(code string) bool {
+	if len(code) == 0 {
+		return false
+	}
+
+	for _, digit := range code {
+		if digit < '0' || digit > '9' {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (access *Access) FromMap(m map[string]any) *Access {
 	switch v := m["id"].(type) {
 	case float64:
@@ -185,21 +199,28 @@ func (accesses *Accesses) Add(access *Access) (*Accesses, bool) {
 	return accesses, added
 }
 
-func (accesses *Accesses) FromMap(f []any) *Accesses {
+func (accesses *Accesses) FromMap(f []any) bool {
 	accesses.mutex.Lock()
 	defer accesses.mutex.Unlock()
 
-	accesses.List = []*Access{}
+	list := []*Access{}
 
 	for _, r := range f {
 		switch m := r.(type) {
 		case map[string]any:
 			access := NewAccess().FromMap(m)
-			accesses.List = append(accesses.List, access)
+			if !isNumericAccessCode(access.Code) {
+				return false
+			}
+			list = append(list, access)
+		default:
+			return false
 		}
 	}
 
-	return accesses
+	accesses.List = list
+
+	return true
 }
 
 func (accesses *Accesses) GetAccess(code string) (access *Access, ok bool) {

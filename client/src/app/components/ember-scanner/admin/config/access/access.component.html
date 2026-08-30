@@ -1,6 +1,6 @@
 <div class="row top">
-  <p class="mat-body">You can decide to leave your instance unlocked and accessible to everyone, or set passwords with
-    specific systems/talkgroups. When used, the user will be prompted once for their password. It is then stored
+  <p class="mat-body">You can decide to leave your instance unlocked and accessible to everyone, or set numeric access codes with
+    specific systems/talkgroups. When used, the user will be prompted once for their code. It is then stored
   internally on the client side and reused thereafter.</p>
   <button type="button" mat-button color="accent" (click)="add()">New access</button>
 </div>
@@ -27,7 +27,8 @@
             <span class="mat-caption">The access code to unlock the client.</span>
           </p>
           <mat-form-field floatLabel="auto">
-            <input [type]="hideCode ? 'password' : 'text'" matInput formControlName="code" placeholder="Code">
+            <input [type]="hideCode ? 'password' : 'text'" inputmode="numeric" pattern="[0-9]*"
+              autocomplete="off" matInput formControlName="code" placeholder="Numeric code">
             <button type="button" mat-icon-button matSuffix (click)="hideCode = !hideCode">
               <mat-icon>{{ hideCode ? 'visibility_off' : 'visibility' }}</mat-icon>
             </button>
@@ -39,6 +40,11 @@
             @if (access.get('code')?.hasError('required')) {
               <mat-error>
                 Code is required
+              </mat-error>
+            }
+            @if (access.get('code')?.hasError('pattern')) {
+              <mat-error>
+                Code must contain numbers only
               </mat-error>
             }
           </mat-form-field>

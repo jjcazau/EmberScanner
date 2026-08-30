@@ -1,12 +1,19 @@
 {
   "name": "Ember Scanner",
   "short_name": "Ember Scanner",
+  "description": "Listen to and manage your Ember Scanner live radio feed.",
+  "id": "./",
+  "lang": "en",
+  "dir": "ltr",
   "theme_color": "#1e1e1e",
   "background_color": "#1e1e1e",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
   "scope": "./",
   "start_url": "./",
+  "categories": ["utilities", "entertainment"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "assets/icons/icon-72x72.png",

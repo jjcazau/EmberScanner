@@ -154,6 +154,7 @@ export interface Options {
     email?: string;
     keypadBeeps?: string;
     maxClients?: number;
+    maxPinAttempts?: number;
     playbackGoesLive?: boolean;
     pruneDays?: number;
     showListenersCount?: boolean;
@@ -483,7 +484,11 @@ export class EmberScannerAdminService implements OnDestroy {
     newAccessForm(access?: Access): FormGroup {
         return this.ngFormBuilder.group({
             id: this.ngFormBuilder.nonNullable.control(access?.id),
-            code: this.ngFormBuilder.nonNullable.control(access?.code, [Validators.required, this.validateAccessCode()]),
+            code: this.ngFormBuilder.nonNullable.control(access?.code, [
+                Validators.required,
+                Validators.pattern(/^[0-9]+$/),
+                this.validateAccessCode(),
+            ]),
             expiration: this.ngFormBuilder.nonNullable.control(access?.expiration),
             ident: this.ngFormBuilder.nonNullable.control(access?.ident, Validators.required),
             limit: this.ngFormBuilder.nonNullable.control(access?.limit),
@@ -567,6 +572,7 @@ export class EmberScannerAdminService implements OnDestroy {
             email: this.ngFormBuilder.control(options?.email),
             keypadBeeps: this.ngFormBuilder.control(options?.keypadBeeps, Validators.required),
             maxClients: this.ngFormBuilder.control(options?.maxClients, [Validators.required, Validators.min(1)]),
+            maxPinAttempts: this.ngFormBuilder.control(options?.maxPinAttempts, [Validators.required, Validators.min(1)]),
             playbackGoesLive: this.ngFormBuilder.control(options?.playbackGoesLive),
             pruneDays: this.ngFormBuilder.control(options?.pruneDays, [Validators.required, Validators.min(0)]),
             showListenersCount: this.ngFormBuilder.control(options?.showListenersCount),

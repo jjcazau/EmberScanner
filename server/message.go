@@ -34,6 +34,7 @@ const (
 	MessageCommandLivefeedMap    = "LFM"
 	MessageCommandMax            = "MAX"
 	MessageCommandPin            = "PIN"
+	MessageCommandPinLocked      = "LCK"
 	MessageCommandPushId         = "PID"
 	MessageCommandServer         = "SRV"
 	MessageCommandVersion        = "VER"

@@ -1,0 +1,133 @@
+:host {
+  box-sizing: border-box;
+  display: block;
+  margin: auto;
+  max-width: 440px;
+  padding: 24px;
+  width: 100%;
+}
+
+.pin-branding {
+  color: rgb(64, 64, 64);
+  font-size: 16px;
+  letter-spacing: 2px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: -1px -1px 1px rgba(0, 0, 0, 0.7), 1px 1px 1px rgba(255, 255, 255, 0.3);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.pin-display {
+  background: rgb(209, 238, 238);
+  box-shadow: 2px 2px 4px rgb(0, 0, 0) inset, 1px 1px 2px 1px rgb(255, 255, 255);
+  color: rgba(0, 0, 0, 0.8);
+  margin-bottom: 20px;
+  min-height: 132px;
+  padding: 16px;
+  text-align: center;
+
+  h1 {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    margin: 0 0 10px;
+  }
+
+  &.error {
+    background: rgb(255, 205, 200);
+
+    .pin-message {
+      color: rgb(150, 20, 20);
+      font-weight: 700;
+    }
+  }
+
+  &.pending .pin-message {
+    animation: pin-blink 800ms step-end infinite;
+  }
+}
+
+.pin-code {
+  font-family: monospace;
+  font-size: 42px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  line-height: 52px;
+  min-height: 52px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  white-space: nowrap;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.pin-message {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  min-height: 18px;
+}
+
+.pin-keypad {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  .ember-button {
+    box-sizing: border-box;
+    height: 58px;
+    margin: 0;
+    width: 100%;
+  }
+}
+
+.pin-key {
+  font-size: 22px;
+}
+
+.pin-action {
+  font-size: 11px;
+}
+
+.pin-icon {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+}
+
+.pin-enter {
+  font-size: 14px;
+  grid-column: 1 / -1;
+  letter-spacing: 0.16em;
+}
+
+@keyframes pin-blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (max-height: 680px) {
+  :host {
+    padding-bottom: 12px;
+    padding-top: 12px;
+  }
+
+  .pin-display {
+    margin-bottom: 12px;
+    min-height: 96px;
+    padding: 8px 16px;
+  }
+
+  .pin-keypad {
+    gap: 6px;
+
+    .ember-button {
+      height: 44px;
+    }
+  }
+}

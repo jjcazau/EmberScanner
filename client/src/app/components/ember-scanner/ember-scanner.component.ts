@@ -38,8 +38,6 @@ export class EmberScannerComponent implements OnDestroy, OnInit {
 
     @ViewChild('searchPanel') private searchPanel: MatSidenav | undefined;
 
-    @ViewChild('selectPanel') private selectPanel: MatSidenav | undefined;
-
     constructor(
         private matSnackBar: MatSnackBar,
         private ngElementRef: ElementRef,
@@ -96,7 +94,6 @@ export class EmberScannerComponent implements OnDestroy, OnInit {
         this.emberScannerService.stopLivefeed();
 
         this.searchPanel?.close();
-        this.selectPanel?.close();
     }
 
     toggleFullscreen(): void {

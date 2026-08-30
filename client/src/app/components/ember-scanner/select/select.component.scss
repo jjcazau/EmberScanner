@@ -45,29 +45,9 @@
 }
 
 .ember-button {
-  width: calc(25% - 4px);
+  width: calc(33.333% - 4px);
 }
 
 .ember-button-mini {
-  width: calc(12.5% - 4px);
-}
-
-@media (min-width: 720px) {
-  .ember-button {
-    width: calc(20% - 4px);
-  }
-
-  .ember-button-mini {
-    width: calc(10% - 4px);
-  }
-}
-
-@media (min-width: 1200px) {
-  .ember-button {
-    width: calc(10% - 4px);
-  }
-
-  .ember-button-mini {
-    width: calc(5% - 4px);
-  }
+  width: calc(16.666% - 4px);
 }

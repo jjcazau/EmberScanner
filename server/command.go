@@ -367,6 +367,9 @@ func (command *Command) userAdd() {
 	if command.code == "" {
 		command.exitWithError(fmt.Sprintf("Missing %s <code> arguments.", COMMAND_ARG_CODE))
 	}
+	if !isNumericAccessCode(command.code) {
+		command.exitWithError(fmt.Sprintf("Invalid %s <code>; access codes must contain numbers only.", COMMAND_ARG_CODE))
+	}
 
 	u := map[string]any{
 		"code":    command.code,

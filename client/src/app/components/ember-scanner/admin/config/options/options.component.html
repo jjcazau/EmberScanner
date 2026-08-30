@@ -122,6 +122,21 @@
     </div>
     <div class="row">
       <p>
+        <span class="mat-body">Max PIN Attempts</span><br>
+        <span class="mat-caption">Failed PIN attempts allowed per IP address within 15 minutes.</span>
+      </p>
+      <mat-form-field>
+        <input type="number" min="1" step="1" matInput formControlName="maxPinAttempts">
+        <mat-error *ngIf="form.get('maxPinAttempts')?.hasError('required')">
+          Max PIN attempts is required
+        </mat-error>
+        <mat-error *ngIf="form.get('maxPinAttempts')?.hasError('min')">
+          Max PIN attempts must be at least 1
+        </mat-error>
+      </mat-form-field>
+    </div>
+    <div class="row">
+      <p>
         <span class="mat-body">Playback Mode Goes Live</span><br>
         <span class="mat-caption">Playback mode changes to live stream mode when the search list is
         exhausted.</span>

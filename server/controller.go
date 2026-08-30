@@ -36,6 +36,7 @@ type Controller struct {
 	Admin       *Admin
 	Api         *Api
 	Apikeys     *Apikeys
+	AuthLimiter *AuthLimiter
 	Calls       *Calls
 	Clients     *Clients
 	Config      *Config
@@ -58,20 +59,21 @@ type Controller struct {
 
 func NewController(config *Config) *Controller {
 	controller := &Controller{
-		Clients:    NewClients(),
-		Config:     config,
-		Accesses:   NewAccesses(),
-		Apikeys:    NewApikeys(),
-		Dirwatches: NewDirwatches(),
-		FFMpeg:     NewFFMpeg(),
-		Groups:     NewGroups(),
-		Logs:       NewLogs(),
-		Options:    NewOptions(),
-		Systems:    NewSystems(),
-		Tags:       NewTags(),
-		Register:   make(chan *Client, 8192),
-		Unregister: make(chan *Client, 8192),
-		Ingest:     make(chan *Call, 8192),
+		Clients:     NewClients(),
+		Config:      config,
+		Accesses:    NewAccesses(),
+		Apikeys:     NewApikeys(),
+		AuthLimiter: NewAuthLimiter(),
+		Dirwatches:  NewDirwatches(),
+		FFMpeg:      NewFFMpeg(),
+		Groups:      NewGroups(),
+		Logs:        NewLogs(),
+		Options:     NewOptions(),
+		Systems:     NewSystems(),
+		Tags:        NewTags(),
+		Register:    make(chan *Client, 8192),
+		Unregister:  make(chan *Client, 8192),
+		Ingest:      make(chan *Call, 8192),
 	}
 
 	controller.Admin = NewAdmin(controller)
@@ -450,35 +452,32 @@ func (controller *Controller) ProcessMessageCommandLivefeedMap(client *Client, m
 }
 
 func (controller *Controller) ProcessMessageCommandPin(client *Client, message *Message) error {
-	const maxAuthCount = 5
-
 	switch v := message.Payload.(type) {
 	case string:
+		ip := client.GetRemoteAddr()
+		if retryAfter := controller.AuthLimiter.RetryAfter(ip, controller.Options.MaxPinAttempts); retryAfter > 0 {
+			client.Send <- &Message{Command: MessageCommandPinLocked, Payload: uint(retryAfter.Seconds()) + 1}
+			return nil
+		}
+
 		b, err := base64.StdEncoding.DecodeString(v)
 		if err != nil {
 			return fmt.Errorf("controller.processmessage.commandpin: %v", err)
 		}
 
-		client.AuthCount++
-		if client.AuthCount > maxAuthCount {
-			client.Send <- &Message{Command: MessageCommandPin}
-			return nil
-		}
-
 		if controller.Accesses.IsRestricted() {
 			code := string(b)
+			if !isNumericAccessCode(code) {
+				controller.Logs.LogEvent(LogLevelWarn, fmt.Sprintf("invalid non-numeric access code for ip %s", ip))
+				controller.sendPinFailure(client, ip)
+				return nil
+			}
 			if access, ok := controller.Accesses.GetAccess(code); ok {
 				client.Access = access
 
 			} else {
-				controller.Logs.LogEvent(LogLevelWarn, fmt.Sprintf("invalid access code %s for ip %s", code, client.GetRemoteAddr()))
-				client.Send <- &Message{Command: MessageCommandPin}
-				return nil
-			}
-
-			if client.AuthCount == maxAuthCount {
-				controller.Logs.LogEvent(LogLevelWarn, fmt.Sprintf("locked access for ident %s locked", client.Access.Ident))
-				client.Send <- &Message{Command: MessageCommandPin}
+				controller.Logs.LogEvent(LogLevelWarn, fmt.Sprintf("invalid access code %s for ip %s", code, ip))
+				controller.sendPinFailure(client, ip)
 				return nil
 			}
 
@@ -500,12 +499,21 @@ func (controller *Controller) ProcessMessageCommandPin(client *Client, message *
 			client.Access = NewAccess()
 		}
 
-		client.AuthCount = 0
+		controller.AuthLimiter.Reset(ip)
 
 		client.SendConfig(controller.Groups, controller.Options, controller.Systems, controller.Tags)
 	}
 
 	return nil
+}
+
+func (controller *Controller) sendPinFailure(client *Client, ip string) {
+	if retryAfter := controller.AuthLimiter.Failed(ip, controller.Options.MaxPinAttempts); retryAfter > 0 {
+		controller.Logs.LogEvent(LogLevelWarn, fmt.Sprintf("pin authentication locked for ip %s", ip))
+		client.Send <- &Message{Command: MessageCommandPinLocked, Payload: uint(retryAfter.Seconds())}
+	} else {
+		client.Send <- &Message{Command: MessageCommandPin}
+	}
 }
 
 func (controller *Controller) ProcessMessageCommandVersion(client *Client) {

@@ -17,7 +17,7 @@
  * ****************************************************************************
  */
 
-import { Component } from '@angular/core';
+import { Component, HostListener } from '@angular/core';
 
 @Component({
     selector: 'app-root',
@@ -25,4 +25,26 @@ import { Component } from '@angular/core';
     templateUrl: './app.component.html',
     standalone: false
 })
-export class AppComponent { }
+export class AppComponent {
+    @HostListener('document:gesturestart', ['$event'])
+    @HostListener('document:gesturechange', ['$event'])
+    @HostListener('document:gestureend', ['$event'])
+    @HostListener('document:dblclick', ['$event'])
+    preventGestureZoom(event: Event): void {
+        event.preventDefault();
+    }
+
+    @HostListener('document:wheel', ['$event'])
+    preventWheelZoom(event: WheelEvent): void {
+        if (event.ctrlKey) {
+            event.preventDefault();
+        }
+    }
+
+    @HostListener('document:keydown', ['$event'])
+    preventKeyboardZoom(event: KeyboardEvent): void {
+        if ((event.ctrlKey || event.metaKey) && ['+', '-', '=', '0'].includes(event.key)) {
+            event.preventDefault();
+        }
+    }
+}

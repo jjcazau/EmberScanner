@@ -33,7 +33,6 @@ import (
 
 type Client struct {
 	Access     *Access
-	AuthCount  int
 	Controller *Controller
 	Conn       *websocket.Conn
 	Send       chan *Message

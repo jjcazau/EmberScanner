@@ -25,6 +25,7 @@ import { EmberScannerService } from './ember-scanner.service';
 import { EmberScannerMainComponent } from './main/main.component';
 import { EmberScannerSupportComponent } from './main/support/support.component';
 import { EmberScannerNativeModule } from './native/native.module';
+import { EmberScannerPinComponent } from './pin/pin.component';
 import { EmberScannerSearchComponent } from './search/search.component';
 import { EmberScannerSelectComponent } from './select/select.component';
 
@@ -32,6 +33,7 @@ import { EmberScannerSelectComponent } from './select/select.component';
     declarations: [
         EmberScannerComponent,
         EmberScannerMainComponent,
+        EmberScannerPinComponent,
         EmberScannerSearchComponent,
         EmberScannerSelectComponent,
         EmberScannerSupportComponent,

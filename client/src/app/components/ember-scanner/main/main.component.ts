@@ -17,9 +17,7 @@
  * ****************************************************************************
  */
 
-import { ChangeDetectorRef, Component, EventEmitter, OnDestroy, OnInit, Output, ViewChild } from '@angular/core';
-import { FormBuilder, FormGroup } from '@angular/forms';
-import { MatInput } from '@angular/material/input';
+import { ChangeDetectorRef, Component, EventEmitter, OnDestroy, OnInit, Output } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Subscription, timer } from 'rxjs';
 import packageInfo from '../../../../../package.json';
@@ -46,7 +44,8 @@ import { EmberScannerSupportComponent } from './support/support.component';
 })
 export class EmberScannerMainComponent implements OnDestroy, OnInit {
     auth = false;
-    authForm: FormGroup;
+    pinError = '';
+    pinPending = false;
 
     avoided = false;
 
@@ -113,11 +112,15 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
     replayOffset = 0;
     replayTimer: Subscription | undefined;
 
+    selectedHistoryCallId: number | undefined;
+
     tempAvoid = 0;
 
     timeFormat = 'HH:mm';
 
     type = '';
+
+    volumeLevel = 100;
 
     get showListenersCount(): boolean {
         return this.config?.showListenersCount || false;
@@ -125,11 +128,7 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
 
     @Output() openSearchPanel = new EventEmitter<void>();
 
-    @Output() openSelectPanel = new EventEmitter<void>();
-
     @Output() toggleFullscreen = new EventEmitter<void>();
-
-    @ViewChild('password', { read: MatInput }) private authPassword: MatInput | undefined;
 
     private clockTimer: Subscription | undefined;
 
@@ -139,33 +138,35 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
 
     private eventSubscription;
 
+    private pendingPin = '';
+
     constructor(
         private emberScannerService: EmberScannerService,
         private matSnackBar: MatSnackBar,
         private ngChangeDetectorRef: ChangeDetectorRef,
-        private ngFormBuilder: FormBuilder,
     ) {
-        this.authForm = this.ngFormBuilder.group<{
-            password: string | null;
-        }>({
-            password: null
-        });
-
         this.eventSubscription = this.emberScannerService.event.subscribe((event: EmberScannerEvent) => this.eventHandler(event));
     }
 
-    authenticate(password = this.authForm.get('password')?.value): void {
-        if (password) {
-            this.authForm.disable();
-
-            this.emberScannerService.authenticate(password);
+    authenticate(pin: string): void {
+        if (!/^[0-9]+$/.test(pin)) {
+            this.pinError = 'NUMBERS ONLY';
+            this.emberScannerService.beep(EmberScannerBeepStyle.Denied);
+            return;
         }
+
+        this.pendingPin = pin;
+        this.pinError = '';
+        this.pinPending = true;
+        this.emberScannerService.authenticate(pin);
     }
 
     authFocus(): void {
-        if (this.auth && this.authPassword instanceof MatInput) {
-            this.authPassword.focus();
-        }
+        // The dedicated PIN screen handles keypad and physical-keyboard input.
+    }
+
+    clearPinError(): void {
+        this.pinError = '';
     }
 
     avoid(options?: EmberScannerAvoidOptions): void {
@@ -325,6 +326,38 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
         }
     }
 
+    playHistory(direction: -1 | 1): void {
+        if (this.auth) {
+            this.authFocus();
+
+            return;
+        }
+
+        const populatedCalls = this.callHistory.filter((call): call is EmberScannerCall => !!call);
+
+        if (!populatedCalls.length || this.livefeedPaused) {
+            this.emberScannerService.beep(EmberScannerBeepStyle.Denied);
+
+            return;
+        }
+
+        const currentIndex = populatedCalls.findIndex((call) => call.id === this.selectedHistoryCallId);
+        const selectedIndex = currentIndex < 0
+            ? 0
+            : Math.max(
+                0,
+                Math.min(populatedCalls.length - 1, currentIndex + direction),
+            );
+        const selectedCall = populatedCalls[selectedIndex];
+
+        this.selectedHistoryCallId = selectedCall.id;
+
+        this.emberScannerService.beep(EmberScannerBeepStyle.Activate);
+        this.emberScannerService.play(selectedCall);
+
+        this.updateDimmer();
+    }
+
     showHelp(): void {
         this.matSnackBar.openFromComponent(EmberScannerSupportComponent, {
             data: { email: this.email },
@@ -346,21 +379,6 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
         }
     }
 
-    showSelectPanel(): void {
-        if (!this.config) {
-            return;
-        }
-
-        if (this.auth) {
-            this.authFocus();
-
-        } else {
-            this.emberScannerService.beep();
-
-            this.openSelectPanel.emit();
-        }
-    }
-
     skip(options?: { delay?: boolean }): void {
         if (this.auth) {
             this.authFocus();
@@ -378,25 +396,51 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
         this.emberScannerService.stop();
     }
 
+    cycleVolume(): void {
+        this.volumeLevel = Math.round(this.emberScannerService.cycleVolume() * 100);
+
+        this.emberScannerService.beep(EmberScannerBeepStyle.Activate);
+
+        this.updateDimmer();
+    }
+
+    toggleFullscreenButton(): void {
+        if (this.auth) {
+            this.authFocus();
+
+            return;
+        }
+
+        this.emberScannerService.beep(EmberScannerBeepStyle.Activate);
+        this.toggleFullscreen.emit();
+
+        this.updateDimmer();
+    }
+
     private eventHandler(event: EmberScannerEvent): void {
         if ('auth' in event && event.auth) {
-            const password = this.emberScannerService.readPin();
+            const pin = this.emberScannerService.readPin();
 
-            if (password) {
+            if (pin && /^[0-9]+$/.test(pin)) {
                 this.emberScannerService.clearPin();
-
-                this.authForm.get('password')?.setValue(password);
-
-                this.emberScannerService.authenticate(password);
+                this.pendingPin = pin;
+                this.pinPending = true;
+                this.emberScannerService.authenticate(pin);
 
             } else {
-                this.auth = event.auth;
-
-                this.authForm.reset();
-
-                if (this.authForm.disabled) {
-                    this.authForm.enable();
+                if (pin) {
+                    this.emberScannerService.clearPin();
                 }
+
+                this.auth = true;
+
+                if (this.pinPending && !event.expired && !event.locked && !event.tooMany) {
+                    this.pinError = 'INVALID CODE — TRY AGAIN';
+                    this.emberScannerService.beep(EmberScannerBeepStyle.Denied);
+                }
+
+                this.pinPending = false;
+                this.pendingPin = '';
             }
         }
 
@@ -423,25 +467,22 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
 
             this.timeFormat = this.config?.time12hFormat ? 'h:mm a' : 'HH:mm';
 
-            const password = this.authForm.get('password')?.value;
-
-            if (password) {
-                this.emberScannerService.savePin(password);
-
-                this.authForm.reset();
+            if (this.pendingPin) {
+                this.emberScannerService.savePin(this.pendingPin);
             }
 
             this.auth = false;
-
-            this.authForm.reset();
-
-            if (this.authForm.enabled) {
-                this.authForm.disable();
-            }
+            this.pinError = '';
+            this.pinPending = false;
+            this.pendingPin = '';
         }
 
         if ('expired' in event && event.expired === true) {
-            this.authForm.get('password')?.setErrors({ expired: true });
+            this.auth = true;
+            this.pinPending = false;
+            this.pendingPin = '';
+            this.pinError = 'CODE EXPIRED';
+            this.emberScannerService.beep(EmberScannerBeepStyle.Denied);
         }
 
         if ('holdSys' in event) {
@@ -458,6 +499,16 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
 
         if ('listeners' in event) {
             this.listeners = event.listeners || 0;
+        }
+
+        if ('locked' in event && event.locked === true) {
+            const minutes = Math.max(1, Math.ceil((event.retryAfter || 0) / 60));
+
+            this.auth = true;
+            this.pinPending = false;
+            this.pendingPin = '';
+            this.pinError = `TOO MANY ATTEMPTS — TRY AGAIN IN ${minutes} MIN`;
+            this.emberScannerService.beep(EmberScannerBeepStyle.Denied);
         }
 
         if ('map' in event) {
@@ -479,7 +530,11 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
         }
 
         if ('tooMany' in event && event.tooMany === true) {
-            this.authForm.get('password')?.setErrors({ tooMany: true });
+            this.auth = true;
+            this.pinPending = false;
+            this.pendingPin = '';
+            this.pinError = 'TOO MANY CONNECTIONS';
+            this.emberScannerService.beep(EmberScannerBeepStyle.Denied);
         }
 
         if ('livefeedMode' in event && event.livefeedMode) {
@@ -500,11 +555,9 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
     }
 
     private formatFrequency(frequency: number | undefined): string {
-        return typeof frequency === 'number' ? frequency
-            .toString()
-            .padStart(9, '0')
-            .replace(/(\d)(?=(\d{3})+$)/g, '$1 ')
-            .concat(' Hz') : '';
+        return typeof frequency === 'number'
+            ? `${(frequency / 1_000_000).toFixed(5)} MHz`
+            : '';
     }
 
     private getLedColor(call: EmberScannerCall | undefined): string {

@@ -193,11 +193,12 @@ func (admin *Admin) ConfigHandler(w http.ResponseWriter, r *http.Request) {
 			admin.mutex.Lock()
 			defer admin.mutex.Unlock()
 
-			admin.Controller.Dirwatches.Stop()
-
 			switch v := m["access"].(type) {
 			case []any:
-				admin.Controller.Accesses.FromMap(v)
+				if !admin.Controller.Accesses.FromMap(v) {
+					w.WriteHeader(http.StatusBadRequest)
+					return
+				}
 				err := admin.Controller.Accesses.Write(admin.Controller.Database)
 				if err != nil {
 					logError(err)
@@ -208,6 +209,8 @@ func (admin *Admin) ConfigHandler(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 			}
+
+			admin.Controller.Dirwatches.Stop()
 
 			switch v := m["apikeys"].(type) {
 			case []any:
@@ -621,7 +624,13 @@ func (admin *Admin) UserAddHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		admin.Controller.Accesses.Add(NewAccess().FromMap(m))
+		access := NewAccess().FromMap(m)
+		if !isNumericAccessCode(access.Code) {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		admin.Controller.Accesses.Add(access)
 
 		if err := admin.Controller.Accesses.Write(admin.Controller.Database); err == nil {
 			if err := admin.Controller.Accesses.Read(admin.Controller.Database); err == nil {

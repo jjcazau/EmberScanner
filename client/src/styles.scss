@@ -31,14 +31,10 @@ $ember-scanner-theme: mat.m2-define-light-theme(
 body {
 	font-family: $ember-scanner-font-family;
 	margin: 0;
+	-webkit-tap-highlight-color: transparent;
 }
 
 body,
 html {
-	height: 100%;
-}
-
-html,
-body {
 	height: 100%;
 }

@@ -63,6 +63,7 @@ type DefaultOptions struct {
 	duplicateDetectionTimeFrame uint
 	keypadBeeps                 string
 	maxClients                  uint
+	maxPinAttempts              uint
 	playbackGoesLive            bool
 	pruneDays                   uint
 	showListenersCount          bool
@@ -107,6 +108,7 @@ var defaults Defaults = Defaults{
 		duplicateDetectionTimeFrame: 500,
 		keypadBeeps:                 "uniden",
 		maxClients:                  200,
+		maxPinAttempts:              5,
 		playbackGoesLive:            false,
 		pruneDays:                   7,
 		showListenersCount:          false,
