@@ -18,19 +18,11 @@
  */
 
 import { ModuleWithProviders, NgModule } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatDialogModule } from '@angular/material/dialog';
 import { ServiceWorkerModule } from '@angular/service-worker';
-import { AppUpdateComponent } from './update.component';
 import { AppUpdateService } from './update.service';
 
 @NgModule({
-    declarations: [AppUpdateComponent],
-    imports: [
-        MatButtonModule,
-        MatDialogModule,
-        ServiceWorkerModule,
-    ],
+    imports: [ServiceWorkerModule],
 })
 export class AppUpdateModule {
     static forRoot(): ModuleWithProviders<AppUpdateModule> {

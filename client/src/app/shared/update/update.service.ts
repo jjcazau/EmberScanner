@@ -18,16 +18,13 @@
  */
 
 import { ApplicationRef, Injectable } from '@angular/core';
-import { MatDialog } from '@angular/material/dialog';
 import { SwUpdate, VersionEvent } from '@angular/service-worker';
-import { AppUpdateComponent } from './update.component';
 import { concat, interval } from 'rxjs';
 import { first } from 'rxjs/operators';
 
 @Injectable()
 export class AppUpdateService {
   constructor(
-    private matDialog: MatDialog,
     private ngAppRef: ApplicationRef,
     private ngSwUpdate: SwUpdate,
   ) {
@@ -42,20 +39,13 @@ export class AppUpdateService {
 
     this.ngSwUpdate.versionUpdates.subscribe((event: VersionEvent) => {
       if (event.type === 'VERSION_READY') {
-        this.prompt();
+        this.activateLatestVersion();
       }
     });
   }
 
-  prompt(): void {
-    this.matDialog.open(AppUpdateComponent).afterClosed().subscribe((doUpdate) => {
-      if (doUpdate) {
-        if (this.ngSwUpdate.isEnabled) {
-          this.ngSwUpdate.activateUpdate().then(() => document.location.reload());
-        } else {
-          document.location.reload();
-        }
-      }
-    });
+  private async activateLatestVersion(): Promise<void> {
+    await this.ngSwUpdate.activateUpdate();
+    document.location.reload();
   }
 }
