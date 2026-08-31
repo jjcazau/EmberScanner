@@ -40,9 +40,15 @@ func TestLivefeedActiveTalkgroupsReturnsSnapshot(t *testing.T) {
 }
 
 func TestCallSearchOptionsParsesLivefeedFilter(t *testing.T) {
-	options := NewCallSearchOptions().fromMap(map[string]any{"livefeed": true})
+	options := NewCallSearchOptions().fromMap(map[string]any{
+		"livefeed": true,
+		"request":  float64(7),
+	})
 
 	if !options.Livefeed {
 		t.Fatal("expected livefeed history filtering to be enabled")
+	}
+	if options.Request != uint(7) {
+		t.Fatalf("expected request 7, got %v", options.Request)
 	}
 }

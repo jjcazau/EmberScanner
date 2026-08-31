@@ -155,7 +155,9 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
 
     private historyLoading = false;
 
-    private historyRequested = false;
+    private historyReplacePending = false;
+
+    private historyRequest = 0;
 
     private pendingHistoryIndex: number | undefined;
 
@@ -527,20 +529,31 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
 
         if ('historyList' in event) {
             const historyList = event.historyList;
+
+            if (!historyList || historyList.options.request !== this.historyRequest) {
+                return;
+            }
+
             const incomingCalls = historyList?.results || [];
-            const existingCalls = new Map(this.callHistory.map((call) => [call.id, call]));
+            const previousCalls = new Map(this.callHistory.map((call) => [call.id, call]));
+            const existingCalls = this.historyReplacePending
+                ? new Map<number, EmberScannerCall>()
+                : new Map(previousCalls);
 
             incomingCalls.forEach((call) => {
                 if (!existingCalls.has(call.id)) {
-                    existingCalls.set(call.id, call);
+                    existingCalls.set(call.id, previousCalls.get(call.id) || call);
                 }
             });
 
             this.callHistory = Array.from(existingCalls.values()).sort((a, b) => {
                 return new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime();
             });
-            this.historyCount = Math.max(historyList?.count || 0, this.callHistory.length);
+            this.historyCount = this.historyReplacePending
+                ? historyList.count
+                : Math.max(historyList.count, this.callHistory.length);
             this.historyLoading = false;
+            this.historyReplacePending = false;
 
             if (typeof this.pendingHistoryIndex === 'number') {
                 const pendingIndex = this.pendingHistoryIndex;
@@ -592,8 +605,9 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
             this.callHistory = this.callHistory.filter((call) => this.isCallEnabled(call));
             this.historyCount = this.callHistory.length;
             this.historyLoading = true;
-            this.historyRequested = true;
-            this.emberScannerService.searchHistoryCalls();
+            this.historyReplacePending = true;
+            this.pendingHistoryIndex = undefined;
+            this.historyRequest = this.emberScannerService.searchHistoryCalls();
         }
 
         if ('pause' in event) {
@@ -805,10 +819,10 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
         }
 
         this.historyLoading = true;
-        this.historyRequested = true;
+        this.historyReplacePending = false;
         // Overlap the last row so a call arriving during the request cannot
         // shift offset pagination far enough to leave a gap.
-        this.emberScannerService.searchHistoryCalls(Math.max(0, this.callHistory.length - 1));
+        this.historyRequest = this.emberScannerService.searchHistoryCalls(Math.max(0, this.callHistory.length - 1));
     }
 
     private isCallEnabled(call: EmberScannerCall): boolean {

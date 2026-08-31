@@ -116,6 +116,7 @@ export class EmberScannerService implements OnDestroy {
     private playbackRefreshing = false;
     private playbackSearchAppend = false;
     private historyPlaybackPending: number | undefined;
+    private historyRequest = 0;
 
     private skipDelay: Subscription | undefined;
 
@@ -591,13 +592,18 @@ export class EmberScannerService implements OnDestroy {
         this.sendtoWebsocket(WebsocketCommand.ListCall, options);
     }
 
-    searchHistoryCalls(offset = 0, limit = 30): void {
+    searchHistoryCalls(offset = 0, limit = 30): number {
+        const request = ++this.historyRequest;
+
         this.sendtoWebsocket(WebsocketCommand.ListCall, {
             limit,
             livefeed: true,
             offset,
+            request,
             sort: -1,
         }, WebsocketCallFlag.History);
+
+        return request;
     }
 
     skip(options?: { delay?: boolean }): void {

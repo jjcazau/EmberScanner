@@ -184,6 +184,7 @@ export interface EmberScannerSearchOptions {
     limit: number;
     livefeed?: boolean;
     offset: number;
+    request?: number;
     sort: number;
     system?: number;
     tag?: string;

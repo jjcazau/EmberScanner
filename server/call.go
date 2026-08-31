@@ -642,6 +642,7 @@ type CallsSearchOptions struct {
 	Livefeed  bool `json:"livefeed,omitempty"`
 	Limit     any  `json:"limit,omitempty"`
 	Offset    any  `json:"offset,omitempty"`
+	Request   any  `json:"request,omitempty"`
 	Sort      any  `json:"sort,omitempty"`
 	System    any  `json:"system,omitempty"`
 	Tag       any  `json:"tag,omitempty"`
@@ -677,6 +678,11 @@ func (searchOptions *CallsSearchOptions) fromMap(m map[string]any) *CallsSearchO
 	switch v := m["offset"].(type) {
 	case float64:
 		searchOptions.Offset = uint(v)
+	}
+
+	switch v := m["request"].(type) {
+	case float64:
+		searchOptions.Request = uint(v)
 	}
 
 	switch v := m["sort"].(type) {
