@@ -490,22 +490,17 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
                 const incomingCall = event.call;
 
                 this.call = incomingCall;
+                this.upsertHistoryCall(incomingCall);
 
-                const historyIndex = this.callHistory.findIndex((call) => call.id === incomingCall.id);
+                this.updateDimmer();
+            }
+        }
 
-                if (historyIndex >= 0) {
-                    this.callHistory[historyIndex] = incomingCall;
-                } else {
-                    this.callHistory.unshift(incomingCall);
-                    this.historyCount = Math.max(this.historyCount + 1, this.callHistory.length);
+        if (event.incomingCall) {
+            this.upsertHistoryCall(event.incomingCall);
 
-                    const selectedIndex = this.callHistory.findIndex((call) => call.id === this.selectedHistoryCallId);
-
-                    if (selectedIndex === 5) {
-                        this.selectedHistoryCallId = undefined;
-                    }
-                }
-
+            if (this.livefeedOffline) {
+                this.callPrevious = event.incomingCall;
                 this.updateDimmer();
             }
         }
@@ -528,9 +523,6 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
             this.pinPending = false;
             this.pendingPin = '';
 
-            if (!this.historyRequested) {
-                this.requestMoreHistory();
-            }
         }
 
         if ('historyList' in event) {
@@ -596,6 +588,12 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
 
         if ('map' in event) {
             this.map = event.map || {};
+
+            this.callHistory = this.callHistory.filter((call) => this.isCallEnabled(call));
+            this.historyCount = this.callHistory.length;
+            this.historyLoading = true;
+            this.historyRequested = true;
+            this.emberScannerService.searchHistoryCalls();
         }
 
         if ('pause' in event) {
@@ -697,53 +695,56 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
     }
 
     private updateDisplay(time = this.callTime): void {
-        if (this.call) {
-            const isAfs = this.isAfsSystem(this.call);
+        const displayCall = this.call || this.callPrevious;
+        const displayTime = this.call ? time : 0;
 
-            this.callProgress = new Date(this.call.dateTime);
-            this.callProgress.setSeconds(this.callProgress.getSeconds() + time);
+        if (displayCall) {
+            const isAfs = this.isAfsSystem(displayCall);
+
+            this.callProgress = new Date(displayCall.dateTime);
+            this.callProgress.setSeconds(this.callProgress.getSeconds() + displayTime);
 
             if (Date.now() - this.callProgress.getTime() >= 86400000) {
-                this.callDate = this.call.dateTime;
+                this.callDate = displayCall.dateTime;
             } else {
                 this.callDate = undefined;
             }
 
-            this.callSystem = this.call.systemData?.label || `${this.call.system}`;
+            this.callSystem = displayCall.systemData?.label || `${displayCall.system}`;
 
-            this.callTag = this.call.talkgroupData?.tag || '';
+            this.callTag = displayCall.talkgroupData?.tag || '';
 
-            this.callTalkgroup = this.call.talkgroupData?.label || `${isAfs ? this.formatAfs(this.call.talkgroup) : this.call.talkgroup}`;
+            this.callTalkgroup = displayCall.talkgroupData?.label || `${isAfs ? this.formatAfs(displayCall.talkgroup) : displayCall.talkgroup}`;
 
-            this.callTalkgroupName = this.call.talkgroupData?.name || this.formatFrequency(this.call?.frequency);
+            this.callTalkgroupName = displayCall.talkgroupData?.name || this.formatFrequency(displayCall.frequency);
 
-            if (Array.isArray(this.call.frequencies) && this.call.frequencies.length) {
-                const frequency = this.call.frequencies.reduce((p, v) => (v.pos || 0) <= time ? v : p, {});
+            if (Array.isArray(displayCall.frequencies) && displayCall.frequencies.length) {
+                const frequency = displayCall.frequencies.reduce((p, v) => (v.pos || 0) <= displayTime ? v : p, {});
 
                 this.callError = typeof frequency.errorCount === 'number' ? `${frequency.errorCount}` : '';
 
-                this.callFrequency = this.formatFrequency(typeof frequency.freq === 'number' ? frequency.freq : this.call.frequency);
+                this.callFrequency = this.formatFrequency(typeof frequency.freq === 'number' ? frequency.freq : displayCall.frequency);
 
                 this.callSpike = typeof frequency.spikeCount === 'number' ? `${frequency.spikeCount}` : '';
 
             } else {
                 this.callError = '';
 
-                this.callFrequency = typeof this.call.frequency === 'number'
-                    ? this.formatFrequency(this.call.frequency)
+                this.callFrequency = typeof displayCall.frequency === 'number'
+                    ? this.formatFrequency(displayCall.frequency)
                     : '';
 
                 this.callSpike = '';
             }
 
-            if (Array.isArray(this.call.sources) && this.call.sources.length) {
-                const source = this.call.sources.reduce((p, v) => (v.pos || 0) <= time ? v : p, {});
+            if (Array.isArray(displayCall.sources) && displayCall.sources.length) {
+                const source = displayCall.sources.reduce((p, v) => (v.pos || 0) <= displayTime ? v : p, {});
 
-                this.callTalkgroupId = isAfs ? this.formatAfs(this.call.talkgroup) : this.call.talkgroup.toString();
+                this.callTalkgroupId = isAfs ? this.formatAfs(displayCall.talkgroup) : displayCall.talkgroup.toString();
 
                 if (typeof source.src === 'number') {
-                    if (Array.isArray(this.call.systemData?.units)) {
-                        this.callUnit = this.call.systemData?.units?.find((u) => {
+                    if (Array.isArray(displayCall.systemData?.units)) {
+                        this.callUnit = displayCall.systemData?.units?.find((u) => {
                             if (typeof u.unitFrom === 'number' && typeof u.unitTo === 'number')
                                 if (u.unitFrom <= (source.src as number) && u.unitTo >= (source.src as number))
                                     return true;
@@ -759,9 +760,9 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
                 }
 
             } else {
-                this.callTalkgroupId = isAfs ? this.formatAfs(this.call.talkgroup) : this.call.talkgroup.toString();
+                this.callTalkgroupId = isAfs ? this.formatAfs(displayCall.talkgroup) : displayCall.talkgroup.toString();
 
-                this.callUnit = this.call.systemData?.units?.find((u) => u.id === this.call?.source)?.label ?? `${this.call.source ?? ''}`;
+                this.callUnit = displayCall.systemData?.units?.find((u) => u.id === displayCall.source)?.label ?? `${displayCall.source ?? ''}`;
             }
 
         }
@@ -808,6 +809,29 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
         // Overlap the last row so a call arriving during the request cannot
         // shift offset pagination far enough to leave a gap.
         this.emberScannerService.searchHistoryCalls(Math.max(0, this.callHistory.length - 1));
+    }
+
+    private isCallEnabled(call: EmberScannerCall): boolean {
+        const enabled = (talkgroup: number): boolean => this.map[call.system]?.[talkgroup]?.active === true;
+
+        return enabled(call.talkgroup) || call.patches?.some((talkgroup) => enabled(talkgroup)) === true;
+    }
+
+    private upsertHistoryCall(incomingCall: EmberScannerCall): void {
+        const historyIndex = this.callHistory.findIndex((call) => call.id === incomingCall.id);
+
+        if (historyIndex >= 0) {
+            this.callHistory[historyIndex] = incomingCall;
+        } else {
+            this.callHistory.unshift(incomingCall);
+            this.historyCount = Math.max(this.historyCount + 1, this.callHistory.length);
+
+            const selectedIndex = this.callHistory.findIndex((call) => call.id === this.selectedHistoryCallId);
+
+            if (selectedIndex === 5) {
+                this.selectedHistoryCallId = undefined;
+            }
+        }
     }
 
     private selectHistoryCall(index: number): void {

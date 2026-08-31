@@ -116,6 +116,7 @@ export interface EmberScannerEvent {
     expired?: boolean;
     holdSys?: boolean;
     holdTg?: boolean;
+    incomingCall?: EmberScannerCall;
     historyList?: EmberScannerPlaybackList;
     linked?: boolean;
     locked?: boolean;
@@ -181,6 +182,7 @@ export interface EmberScannerSearchOptions {
     date?: Date;
     group?: string;
     limit: number;
+    livefeed?: boolean;
     offset: number;
     sort: number;
     system?: number;

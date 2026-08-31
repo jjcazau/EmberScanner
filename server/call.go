@@ -449,6 +449,29 @@ func (calls *Calls) Search(searchOptions *CallsSearchOptions, client *Client) (*
 		}
 	}
 
+	if searchOptions.Livefeed {
+		a := []string{}
+		for system, talkgroups := range client.Livefeed.ActiveTalkgroups() {
+			if len(talkgroups) == 0 {
+				continue
+			}
+
+			ids := make([]string, len(talkgroups))
+			for i, talkgroup := range talkgroups {
+				ids[i] = strconv.FormatUint(uint64(talkgroup), 10)
+			}
+
+			in := fmt.Sprintf("(%s)", strings.Join(ids, ", "))
+			a = append(a, fmt.Sprintf(`(s."systemRef" = %d AND (t."talkgroupRef" IN %s OR EXISTS (SELECT 1 FROM "callPatches" AS cp LEFT JOIN "talkgroups" AS pt ON pt."talkgroupId" = cp."talkgroupId" WHERE cp."callId" = c."callId" AND pt."talkgroupRef" IN %s)))`, system, in, in))
+		}
+
+		if len(a) == 0 {
+			where += " AND 1 = 0"
+		} else {
+			where += fmt.Sprintf(" AND (%s)", strings.Join(a, " OR "))
+		}
+	}
+
 	query = fmt.Sprintf(`SELECT c."timestamp" FROM "calls" AS c LEFT JOIN "systems" AS s ON s."systemId" = c."systemId" LEFT JOIN "talkgroups" AS t ON t."talkgroupId" = c."talkgroupId" LEFT JOIN "delayed" AS d ON d."callId" = c."callId" WHERE %s ORDER BY c."timestamp" ASC`, where)
 	if err = db.Sql.QueryRow(query).Scan(&timestamp); err != nil && err != sql.ErrNoRows {
 		return nil, formatError(err, query)
@@ -614,14 +637,15 @@ func (calls *Calls) WriteCall(call *Call, db *Database) (uint64, error) {
 }
 
 type CallsSearchOptions struct {
-	Date      any `json:"date,omitempty"`
-	Group     any `json:"group,omitempty"`
-	Limit     any `json:"limit,omitempty"`
-	Offset    any `json:"offset,omitempty"`
-	Sort      any `json:"sort,omitempty"`
-	System    any `json:"system,omitempty"`
-	Tag       any `json:"tag,omitempty"`
-	Talkgroup any `json:"talkgroup,omitempty"`
+	Date      any  `json:"date,omitempty"`
+	Group     any  `json:"group,omitempty"`
+	Livefeed  bool `json:"livefeed,omitempty"`
+	Limit     any  `json:"limit,omitempty"`
+	Offset    any  `json:"offset,omitempty"`
+	Sort      any  `json:"sort,omitempty"`
+	System    any  `json:"system,omitempty"`
+	Tag       any  `json:"tag,omitempty"`
+	Talkgroup any  `json:"talkgroup,omitempty"`
 }
 
 func NewCallSearchOptions() *CallsSearchOptions {
@@ -644,6 +668,10 @@ func (searchOptions *CallsSearchOptions) fromMap(m map[string]any) *CallsSearchO
 	switch v := m["limit"].(type) {
 	case float64:
 		searchOptions.Limit = uint(v)
+	}
+
+	if v, ok := m["livefeed"].(bool); ok {
+		searchOptions.Livefeed = v
 	}
 
 	switch v := m["offset"].(type) {

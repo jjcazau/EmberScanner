@@ -87,6 +87,22 @@ func (livefeed *Livefeed) IsAllOff() bool {
 	return true
 }
 
+func (livefeed *Livefeed) ActiveTalkgroups() map[uint][]uint {
+	livefeed.mutex.Lock()
+	defer livefeed.mutex.Unlock()
+
+	active := map[uint][]uint{}
+	for system, talkgroups := range livefeed.Matrix {
+		for talkgroup, enabled := range talkgroups {
+			if enabled {
+				active[system] = append(active[system], talkgroup)
+			}
+		}
+	}
+
+	return active
+}
+
 func (livefeed *Livefeed) IsEnabled(call *Call) bool {
 	livefeed.mutex.Lock()
 	defer livefeed.mutex.Unlock()

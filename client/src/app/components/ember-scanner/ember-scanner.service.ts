@@ -228,9 +228,7 @@ export class EmberScannerService implements OnDestroy {
 
         this.saveLivefeedMap();
 
-        if (this.livefeedMode === EmberScannerLivefeedMode.Online) {
-            this.startLivefeed();
-        }
+        this.syncLivefeedMap();
 
         this.event.emit({
             categories: this.categories,
@@ -303,9 +301,7 @@ export class EmberScannerService implements OnDestroy {
             this.rebuildCategories();
 
             if (typeof options?.resubscribe !== 'boolean' || options.resubscribe) {
-                if (this.livefeedMode === EmberScannerLivefeedMode.Online) {
-                    this.startLivefeed();
-                }
+                this.syncLivefeedMap();
             }
 
             this.event.emit({
@@ -354,9 +350,7 @@ export class EmberScannerService implements OnDestroy {
             this.rebuildCategories();
 
             if (typeof options?.resubscribe !== 'boolean' || options.resubscribe) {
-                if (this.livefeedMode === EmberScannerLivefeedMode.Online) {
-                    this.startLivefeed();
-                }
+                this.syncLivefeedMap();
             }
 
             this.event.emit({
@@ -600,6 +594,7 @@ export class EmberScannerService implements OnDestroy {
     searchHistoryCalls(offset = 0, limit = 30): void {
         this.sendtoWebsocket(WebsocketCommand.ListCall, {
             limit,
+            livefeed: true,
             offset,
             sort: -1,
         }, WebsocketCallFlag.History);
@@ -636,19 +631,11 @@ export class EmberScannerService implements OnDestroy {
     }
 
     startLivefeed(): void {
-        const lfm = Object.keys(this.livefeedMap).reduce((sysMap: { [key: number]: { [key: number]: boolean } }, sys) => {
-            sysMap[+sys] = Object.keys(this.livefeedMap[+sys]).reduce((tgMap: { [key: number]: boolean }, tg: string) => {
-                tgMap[+tg] = this.livefeedMap[+sys][+tg].active;
-                return tgMap;
-            }, {});
-            return sysMap;
-        }, {});
-
         this.livefeedMode = EmberScannerLivefeedMode.Online;
 
         this.event.emit({ livefeedMode: this.livefeedMode });
 
-        this.sendtoWebsocket(WebsocketCommand.LivefeedMap, lfm);
+        this.syncLivefeedMap();
     }
 
     stop(options?: { emit?: boolean }): void {
@@ -680,7 +667,7 @@ export class EmberScannerService implements OnDestroy {
 
         this.stop();
 
-        this.sendtoWebsocket(WebsocketCommand.LivefeedMap, null);
+        this.syncLivefeedMap();
     }
 
     stopPlaybackMode(): void {
@@ -735,9 +722,7 @@ export class EmberScannerService implements OnDestroy {
                 this.skip();
             }
 
-            if (this.livefeedMode === EmberScannerLivefeedMode.Online) {
-                this.startLivefeed();
-            }
+            this.syncLivefeedMap();
 
             this.saveLivefeedMap();
 
@@ -948,7 +933,10 @@ export class EmberScannerService implements OnDestroy {
                             this.queue(this.transformCall(call), { priority: true });
 
                         } else {
-                            this.queue(this.transformCall(call));
+                            const incomingCall = this.transformCall(call);
+
+                            this.event.emit({ incomingCall });
+                            this.queue(incomingCall);
                         }
                     }
 
@@ -975,11 +963,9 @@ export class EmberScannerService implements OnDestroy {
 
                     this.rebuildLivefeedMap();
 
-                    // Configuration broadcasts preserve an offline feed. If the user has
-                    // already started listening, resend the rebuilt subscription map.
-                    if (this.livefeedMode === EmberScannerLivefeedMode.Online) {
-                        this.startLivefeed();
-                    }
+                    // Keep receiving metadata for selected talkgroups in every mode.
+                    // The local audio queue still decides whether calls are played.
+                    this.syncLivefeedMap();
 
                     this.event.emit({
                         auth: false,
@@ -1320,6 +1306,18 @@ export class EmberScannerService implements OnDestroy {
         }, {});
 
         window?.localStorage?.setItem(`${EmberScannerService.LOCAL_STORAGE_KEY_LFM}-${this.instanceId}`, JSON.stringify(lfm));
+    }
+
+    private syncLivefeedMap(): void {
+        const lfm = Object.keys(this.livefeedMap).reduce((sysMap: { [key: number]: { [key: number]: boolean } }, sys) => {
+            sysMap[+sys] = Object.keys(this.livefeedMap[+sys]).reduce((tgMap: { [key: number]: boolean }, tg: string) => {
+                tgMap[+tg] = this.livefeedMap[+sys][+tg].active;
+                return tgMap;
+            }, {});
+            return sysMap;
+        }, {});
+
+        this.sendtoWebsocket(WebsocketCommand.LivefeedMap, lfm);
     }
 
     private sendtoWebsocket(command: string, payload?: unknown, flags?: string): void {
