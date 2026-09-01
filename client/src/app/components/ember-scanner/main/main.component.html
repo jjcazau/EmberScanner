@@ -38,12 +38,11 @@
   <div class="row full call-group">
     <span>{{ callGroup }}</span>
   </div>
-  <div class="row">
-    <div>
+  <div class="row talkgroup-heading">
+    <div class="talkgroup-label">
       <span>{{ callTalkgroup }}</span>
     </div>
-    <div></div>
-    <div>
+    <div class="call-timestamp">
       <span>{{ callDate | date:'MM/dd' }} </span>
       <span>{{ callProgress | date:timeFormat }}</span>
     </div>

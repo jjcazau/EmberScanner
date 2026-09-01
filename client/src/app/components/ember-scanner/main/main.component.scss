@@ -123,6 +123,19 @@
       }
     }
 
+    &.talkgroup-heading {
+      .talkgroup-label {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+
+      .call-timestamp {
+        flex: 0 0 auto;
+        justify-content: flex-end;
+        margin-left: 12px;
+      }
+    }
+
     &.right {
       justify-content: flex-end;
     }
@@ -146,23 +159,23 @@
       text-align: start;
 
       &:nth-child(1) {
-        width: 7%;
+        width: 5%;
       }
 
       &:nth-child(2) {
-        width: 13%;
+        width: 10%;
       }
 
       &:nth-child(3) {
-        width: 22%;
+        width: 15%;
       }
 
       &:nth-child(4) {
-        width: 23%;
+        width: 25%;
       }
 
       &:nth-child(5) {
-        width: 35%;
+        width: 45%;
       }
     }
 
