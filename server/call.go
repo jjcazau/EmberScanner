@@ -99,19 +99,27 @@ func NewCall() *Call {
 func (call *Call) IsValid() (ok bool, err error) {
 	ok = true
 
+	// Keep these checks independent and ordered: SDRTrunk's connection probe
+	// expects the error from the last missing field.
 	if len(call.Audio) <= 44 {
 		ok = false
 		err = errors.New("no audio")
 
-	} else if call.Timestamp.UnixMilli() == 0 {
+	}
+
+	if call.Timestamp.UnixMilli() == 0 {
 		ok = false
 		err = errors.New("no timestamp")
 
-	} else if !(call.System != nil || call.Meta.SystemId > 0 || len(call.Meta.SystemLabel) > 0 || call.Meta.SystemRef > 0) {
+	}
+
+	if !(call.System != nil || call.Meta.SystemId > 0 || len(call.Meta.SystemLabel) > 0 || call.Meta.SystemRef > 0) {
 		ok = false
 		err = errors.New("no system")
 
-	} else if !(call.Talkgroup != nil || call.Meta.TalkgroupId > 0 || len(call.Meta.TalkgroupLabel) > 0 || call.Meta.TalkgroupRef > 0) {
+	}
+
+	if !(call.Talkgroup != nil || call.Meta.TalkgroupId > 0 || len(call.Meta.TalkgroupLabel) > 0 || call.Meta.TalkgroupRef > 0) {
 		ok = false
 		err = errors.New("no talkgroup")
 	}
