@@ -1,14 +1,20 @@
-<ng-container *ngIf="todos.length">
-  <mat-card appearance="outlined">
-    <mat-card-title>Todos</mat-card-title>
-    <mat-list>
-      <mat-list-item *ngFor="let todo of todos">
-        <mat-icon *ngIf="todo.level === 'info'" class="info" matListItemIcon>notifications</mat-icon>
-        <mat-icon *ngIf="todo.level === 'warn'" class="warn" matListItemIcon>warning</mat-icon>
-        <div mat-line>
-          <span class="todo">{{ todo.message }}</span>
-        </div>
-      </mat-list-item>
-    </mat-list>
-  </mat-card>
-</ng-container>
+@if (todos.length) {
+  <div class="todo-list">
+    @for (todo of todos; track todo.message) {
+      <div class="todo-item" [class.warning]="todo.level === 'warn'">
+        <span class="todo-icon">
+          <mat-icon>{{ todo.level === 'warn' ? 'warning' : 'info' }}</mat-icon>
+        </span>
+        <span>{{ todo.message }}</span>
+      </div>
+    }
+  </div>
+} @else {
+  <div class="todo-empty">
+    <span class="todo-empty-icon"><mat-icon>check</mat-icon></span>
+    <div>
+      <strong>Everything looks good</strong>
+      <span>There are no recommended actions right now.</span>
+    </div>
+  </div>
+}

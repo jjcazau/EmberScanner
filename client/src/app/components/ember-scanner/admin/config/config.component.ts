@@ -17,12 +17,22 @@
  * ****************************************************************************
  */
 
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit, QueryList, ViewChildren, ViewEncapsulation } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import { FormArray, FormControl, FormGroup } from '@angular/forms';
-import { MatExpansionPanel } from '@angular/material/expansion';
 import { AdminEvent, EmberScannerAdminService, Config } from '../admin.service';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
+
+export type ConfigSection = 'access' | 'apikeys' | 'dirwatch' | 'downstreams' | 'groups' | 'options' | 'systems' | 'tags';
+
+interface ConfigNavigationItem {
+    id: ConfigSection;
+    control: string;
+    icon: string;
+    label: string;
+    description: string;
+    hideInDocker?: boolean;
+}
 
 @Component({
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -36,6 +46,19 @@ export class EmberScannerAdminConfigComponent implements OnDestroy, OnInit {
     docker = false;
 
     form: FormGroup | undefined;
+
+    activeSection: ConfigSection = 'options';
+
+    readonly sections: ConfigNavigationItem[] = [
+        { id: 'options', control: 'options', icon: 'tune', label: 'General', description: 'Core playback, display and server behaviour.' },
+        { id: 'systems', control: 'systems', icon: 'podcasts', label: 'Systems', description: 'Radio systems, sites, talkgroups and units.' },
+        { id: 'groups', control: 'groups', icon: 'workspaces', label: 'Groups', description: 'Organise talkgroups into reusable collections.' },
+        { id: 'tags', control: 'tags', icon: 'sell', label: 'Tags', description: 'Categorise talkgroups for search and display.' },
+        { id: 'access', control: 'access', icon: 'manage_accounts', label: 'Access', description: 'Control who can listen to this scanner.' },
+        { id: 'apikeys', control: 'apikeys', icon: 'vpn_key', label: 'API keys', description: 'Credentials for uploaders and downstream servers.' },
+        { id: 'dirwatch', control: 'dirwatch', icon: 'folder', label: 'Directory watch', description: 'Monitor local directories for new audio.', hideInDocker: true },
+        { id: 'downstreams', control: 'downstreams', icon: 'share', label: 'Downstreams', description: 'Forward calls to other Ember Scanner instances.' },
+    ];
 
     get access(): FormArray {
         return this.form?.get('access') as FormArray;
@@ -72,8 +95,6 @@ export class EmberScannerAdminConfigComponent implements OnDestroy, OnInit {
     private config: Config | undefined;
 
     private readonly destroy$ = new Subject<void>();
-
-    @ViewChildren(MatExpansionPanel) private panels: QueryList<MatExpansionPanel> | undefined;
 
     constructor(
         private adminService: EmberScannerAdminService,
@@ -112,8 +133,12 @@ export class EmberScannerAdminConfigComponent implements OnDestroy, OnInit {
         this.reset();
     }
 
-    closeAll(): void {
-        this.panels?.forEach((panel) => panel.close());
+    get activeNavigation(): ConfigNavigationItem {
+        return this.sections.find((item) => item.id === this.activeSection) || this.sections[0];
+    }
+
+    selectSection(section: ConfigSection): void {
+        this.activeSection = section;
     }
 
     reset(config = this.config, options?: { dirty?: boolean }): void {

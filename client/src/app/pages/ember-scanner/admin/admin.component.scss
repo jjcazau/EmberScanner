@@ -1,32 +1,18 @@
 :host {
-  background: #1e1e1e;
-  box-sizing: border-box;
+  background: #f5f6f8;
   display: block;
   min-height: 100vh;
-  padding: 16px;
-
-  > div {
-    margin: 16px auto;
-    max-width: 1200px;
-  }
-
-  > h1 {
-    color: #ccc;
-    margin: 0;
-    text-align: center;
-  }
 }
 
-@media (max-width: 719px) {
-  :host > h1 {
-    font-size: 28px;
-    line-height: 32px;
-  }
-
-  .mat-mdc-card {
-    padding: 8px;
-  }
+.server-version {
+  bottom: 14px;
+  color: #667085;
+  font-size: 10px;
+  left: 24px;
+  position: fixed;
+  z-index: 11;
 }
 
-@media (min-width: 720px) {
+@media (max-width: 620px) {
+  .server-version { display: none; }
 }

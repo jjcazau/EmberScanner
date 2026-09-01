@@ -17,21 +17,23 @@
  * ****************************************************************************
  */
 
-import { Component, EventEmitter, Output, QueryList, ViewChildren } from '@angular/core';
-import { MatExpansionPanel } from '@angular/material/expansion';
+import { Component, EventEmitter, Output } from '@angular/core';
 import { Config } from '../admin.service';
+
+type AdminTool = 'talkgroups' | 'units' | 'password' | 'config';
 
 @Component({
     selector: 'ember-scanner-admin-tools',
+    styleUrls: ['./tools.component.scss'],
     templateUrl: './tools.component.html',
     standalone: false
 })
 export class EmberScannerAdminToolsComponent {
     @Output() config = new EventEmitter<Config>();
 
-    @ViewChildren(MatExpansionPanel) private panels: QueryList<MatExpansionPanel> | undefined;
+    activeTool: AdminTool = 'talkgroups';
 
-    closeAll(): void {
-        this.panels?.forEach((panel) => panel.close());
+    selectTool(tool: AdminTool): void {
+        this.activeTool = tool;
     }
 }

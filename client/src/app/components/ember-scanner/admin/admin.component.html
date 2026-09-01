@@ -1,43 +1,112 @@
 @if (!authenticated) {
   <ember-scanner-admin-login></ember-scanner-admin-login>
 }
+
 @if (authenticated) {
-  <ember-scanner-admin-todos></ember-scanner-admin-todos>
-  <mat-accordion displayMode="flat">
-    <mat-expansion-panel #configPanel (afterCollapse)="configComponent.closeAll()">
-      <mat-expansion-panel-header>
-        <mat-panel-title>
-          <mat-icon>settings</mat-icon>
-          Config
-        </mat-panel-title>
-      </mat-expansion-panel-header>
-      <ember-scanner-admin-config #configComponent></ember-scanner-admin-config>
-    </mat-expansion-panel>
-    <mat-expansion-panel (afterExpand)="logsComponent.reload()">
-      <mat-expansion-panel-header>
-        <mat-panel-title>
-          <mat-icon>article</mat-icon>
-          Logs
-        </mat-panel-title>
-      </mat-expansion-panel-header>
-      <ember-scanner-admin-logs #logsComponent></ember-scanner-admin-logs>
-    </mat-expansion-panel>
-    <mat-expansion-panel (afterCollapse)="toolsComponent.closeAll()">
-      <mat-expansion-panel-header>
-        <mat-panel-title>
-          <mat-icon>build</mat-icon>
-          Tools
-        </mat-panel-title>
-      </mat-expansion-panel-header>
-      <ember-scanner-admin-tools #toolsComponent (config)="configComponent.reset($event, { dirty: true }); configPanel.open()"></ember-scanner-admin-tools>
-    </mat-expansion-panel>
-    <mat-expansion-panel hideToggle (click)="logout()">
-      <mat-expansion-panel-header>
-        <mat-panel-title>
+  <div class="admin-shell">
+    <aside class="admin-sidebar" aria-label="Administration navigation">
+      <div class="admin-brand">
+        <div class="admin-brand-mark" aria-hidden="true">
+          <mat-icon>graphic_eq</mat-icon>
+        </div>
+        <div>
+          <strong>Ember Scanner</strong>
+          <span>Control centre</span>
+        </div>
+      </div>
+
+      <nav class="admin-nav">
+        <span class="admin-nav-label">Workspace</span>
+        @for (item of navigation; track item.id) {
+          <button type="button" class="admin-nav-item" [class.active]="activeSection === item.id"
+            [attr.aria-current]="activeSection === item.id ? 'page' : null" (click)="selectSection(item.id)">
+            <mat-icon>{{ item.icon }}</mat-icon>
+            <span>{{ item.label }}</span>
+          </button>
+        }
+      </nav>
+
+      <div class="admin-sidebar-footer">
+        <button type="button" class="admin-nav-item" (click)="logout()">
           <mat-icon>logout</mat-icon>
-          Logout
-        </mat-panel-title>
-      </mat-expansion-panel-header>
-    </mat-expansion-panel>
-  </mat-accordion>
+          <span>Sign out</span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="admin-main">
+      <header class="admin-topbar">
+        <div>
+          <span class="admin-eyebrow">Server administration</span>
+          <h1>{{ activeNavigation.label }}</h1>
+          <p>{{ activeNavigation.description }}</p>
+        </div>
+        <div class="admin-status" aria-label="Admin session authenticated">
+          <span class="admin-status-dot"></span>
+          Authenticated
+        </div>
+      </header>
+
+      <div class="admin-content">
+        <section [hidden]="activeSection !== 'overview'" aria-labelledby="overview-title">
+          <h2 id="overview-title" class="visually-hidden">Overview</h2>
+          <div class="overview-hero">
+            <div>
+              <span class="admin-eyebrow">Welcome back</span>
+              <h2>Your scanner, at a glance</h2>
+              <p>Manage ingestion, access, radio systems and maintenance from one place.</p>
+            </div>
+            <button type="button" mat-flat-button color="primary" (click)="selectSection('configuration')">
+              <mat-icon>settings</mat-icon>
+              Open configuration
+            </button>
+          </div>
+
+          <div class="quick-actions" aria-label="Quick actions">
+            <button type="button" class="quick-action" (click)="openConfigSection('systems', configComponent)">
+              <span class="quick-action-icon"><mat-icon>podcasts</mat-icon></span>
+              <span><strong>Radio systems</strong><small>Manage systems and talkgroups</small></span>
+              <mat-icon class="quick-action-arrow">arrow_forward</mat-icon>
+            </button>
+            <button type="button" class="quick-action" (click)="selectSection('logs')">
+              <span class="quick-action-icon"><mat-icon>article</mat-icon></span>
+              <span><strong>Activity logs</strong><small>Review recent server events</small></span>
+              <mat-icon class="quick-action-arrow">arrow_forward</mat-icon>
+            </button>
+            <button type="button" class="quick-action" (click)="selectSection('tools')">
+              <span class="quick-action-icon"><mat-icon>build</mat-icon></span>
+              <span><strong>Admin tools</strong><small>Import, export and secure</small></span>
+              <mat-icon class="quick-action-arrow">arrow_forward</mat-icon>
+            </button>
+          </div>
+
+          <div class="dashboard-panel">
+            <div class="dashboard-panel-heading">
+              <div>
+                <h2>Attention required</h2>
+                <p>Recommended actions for this server.</p>
+              </div>
+              <mat-icon>notifications</mat-icon>
+            </div>
+            <ember-scanner-admin-todos></ember-scanner-admin-todos>
+          </div>
+        </section>
+
+        <section [hidden]="activeSection !== 'configuration'" aria-label="Configuration">
+          <ember-scanner-admin-config #configComponent></ember-scanner-admin-config>
+        </section>
+
+        <section [hidden]="activeSection !== 'logs'" aria-label="Logs">
+          <div class="dashboard-panel content-panel">
+            <ember-scanner-admin-logs></ember-scanner-admin-logs>
+          </div>
+        </section>
+
+        <section [hidden]="activeSection !== 'tools'" aria-label="Tools">
+          <ember-scanner-admin-tools (config)="applyImportedConfig($event, configComponent)">
+          </ember-scanner-admin-tools>
+        </section>
+      </div>
+    </main>
+  </div>
 }

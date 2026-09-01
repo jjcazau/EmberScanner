@@ -1,4 +1,118 @@
 ember-scanner-admin-config {
+  display: block;
+
+  .settings-shell {
+    background: white;
+    border: 1px solid var(--admin-border, #e5e7eb);
+    border-radius: 12px;
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    min-height: 620px;
+    overflow: hidden;
+  }
+
+  .settings-sidebar {
+    background: #fafafa;
+    border-right: 1px solid var(--admin-border, #e5e7eb);
+    padding: 22px 14px;
+  }
+
+  .settings-sidebar-heading {
+    padding: 0 10px 18px;
+
+    span, small { display: block; }
+    span { color: var(--admin-text, #18202f); font-size: 14px; font-weight: 650; }
+    small { color: var(--admin-muted, #667085); font-size: 11px; margin-top: 3px; }
+  }
+
+  .settings-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+
+    button {
+      align-items: center;
+      background: transparent;
+      border: 0;
+      border-radius: 8px;
+      color: #596273;
+      cursor: pointer;
+      display: flex;
+      font: inherit;
+      font-size: 13px;
+      gap: 10px;
+      min-height: 40px;
+      padding: 0 10px;
+      text-align: left;
+      width: 100%;
+
+      > .mat-icon:first-child { font-size: 19px; height: 19px; width: 19px; }
+      > span { flex: 1; }
+      &:hover { background: #f0f1f3; color: #202631; }
+      &.active { background: var(--admin-accent-soft, #fff0e9); color: var(--admin-accent, #ff6b35); font-weight: 600; }
+    }
+  }
+
+  .settings-error { font-size: 16px; height: 16px; width: 16px; }
+
+  .settings-content {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .settings-header {
+    align-items: center;
+    border-bottom: 1px solid var(--admin-border, #e5e7eb);
+    display: flex;
+    gap: 13px;
+    padding: 20px 24px;
+
+    h2 { color: var(--admin-text, #18202f); font-size: 18px; margin: 0 0 3px; }
+    p { color: var(--admin-muted, #667085); font-size: 12px; margin: 0; }
+  }
+
+  .settings-title-icon {
+    align-items: center;
+    background: var(--admin-accent-soft, #fff0e9);
+    border-radius: 9px;
+    color: var(--admin-accent, #ff6b35);
+    display: flex;
+    height: 38px;
+    justify-content: center;
+    width: 38px;
+
+    .mat-icon { font-size: 20px; height: 20px; width: 20px; }
+  }
+
+  .settings-body {
+    flex: 1;
+    padding: 24px;
+  }
+
+  .settings-actions {
+    align-items: center;
+    background: #fafafa;
+    border-top: 1px solid var(--admin-border, #e5e7eb);
+    display: flex;
+    justify-content: space-between;
+    padding: 14px 24px;
+
+    > div { display: flex; gap: 10px; }
+  }
+
+  .settings-change-state {
+    align-items: center;
+    color: var(--admin-muted, #667085);
+    display: flex;
+    font-size: 12px;
+    gap: 6px;
+    opacity: 0;
+
+    &.visible { opacity: 1; }
+    .mat-icon { font-size: 15px; height: 15px; width: 15px; }
+  }
+
   .row {
     align-items: center;
     display: flex;
@@ -6,69 +120,37 @@ ember-scanner-admin-config {
     flex-wrap: wrap;
     justify-content: space-between;
 
-    &.bottom {
-      margin-top: 1rem;
-    }
-
-    &.top {
-      margin-bottom: 1rem;
-    }
-
-    > p {
-      box-sizing: border-box;
-      flex: 1;
-      padding-right: 1rem;
-    }
-
-    ul {
-      list-style-type: none;
-      padding-left: 1rem;
-    }
-
-    .mat-mdc-button:last-child {
-      margin-left: auto;
-    }
+    &.bottom { margin-top: 1rem; }
+    &.top { margin-bottom: 1rem; }
+    > p { box-sizing: border-box; flex: 1; padding-right: 1rem; }
+    ul { list-style-type: none; padding-left: 1rem; }
+    .mat-mdc-button:last-child { margin-left: auto; }
   }
 
-  .cdk-drag-handle {
-    opacity: 0.5;
-  }
+  .cdk-drag-handle { opacity: 0.5; }
+  .mat-expansion-panel-header-title { align-items: center; }
+  .mat-icon[color="warn"] { font-size: 1rem; height: 1rem; opacity: 0.9; padding-left: 0.5rem; width: 1rem; }
+  .text-center { text-align: center; }
+}
 
-  .mat-expansion-panel-header-title {
-    align-items: center;
-  }
-
-  .mat-icon[color="warn"] {
-    font-size: 1rem;
-    height: 1rem;
-    opacity: 0.9;
-    padding-left: 0.5rem;
-    width: 1rem;
-  }
-
-  .text-center {
-    text-align: center;
+@media (max-width: 760px) {
+  ember-scanner-admin-config {
+    .settings-shell { display: block; }
+    .settings-sidebar { border-bottom: 1px solid var(--admin-border, #e5e7eb); border-right: 0; padding: 14px; }
+    .settings-sidebar-heading { display: none; }
+    .settings-nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .settings-nav button { justify-content: center; padding: 0; }
+    .settings-nav button > span { display: none; }
+    .settings-nav button > .settings-error { display: none; }
+    .settings-body { padding: 18px; }
+    .settings-actions { align-items: flex-end; flex-direction: column; gap: 10px; }
+    .mat-mdc-form-field { flex: 100%; }
   }
 }
 
-@media (max-width: 719px) {
-  ember-scanner-admin-config .mat-mdc-form-field {
-    flex: 100%;
-  }
-}
-
-@media (min-width: 720px) {
-  .row {
-    > p ~ div,
-    .mat-mdc-form-field {
-      min-width: 260px;
-    }
-
-    > p ~ div > {
-      .mat-mdc-button,
-      .mat-mdc-slide-toggle {
-        float: right;
-      }
-    }
+@media (min-width: 761px) {
+  ember-scanner-admin-config .row {
+    > p ~ div, .mat-mdc-form-field { min-width: 260px; }
+    > p ~ div > .mat-mdc-button, > p ~ div > .mat-mdc-slide-toggle { float: right; }
   }
 }

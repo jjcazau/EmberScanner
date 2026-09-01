@@ -1,18 +1,25 @@
-<form [formGroup]="form" (ngSubmit)="login()">
-    <p class="mat-body-2">Please enter the admin password to gain access to the administrative dashboard</p>
-    <mat-form-field hideRequiredMarker>
+<div class="login-shell">
+  <div class="login-card">
+    <div class="login-brand-mark" aria-hidden="true"><mat-icon>graphic_eq</mat-icon></div>
+    <span class="login-eyebrow">Ember Scanner</span>
+    <h1>Welcome back</h1>
+    <p>Sign in to manage your server configuration.</p>
+
+    <form [formGroup]="form" (ngSubmit)="login()">
+      <mat-form-field appearance="outline" hideRequiredMarker>
         <mat-label>Password</mat-label>
-        <input
-            matInput
-            formControlName="password"
-            type="password"
-            autocomplete="current-password"
-            [attr.aria-invalid]="form.get('password')?.invalid"
-            required
-        >
+        <input matInput formControlName="password" type="password" autocomplete="current-password"
+          [attr.aria-invalid]="form.get('password')?.invalid" required>
+        <mat-icon matPrefix>lock</mat-icon>
         <mat-error *ngIf="(form.get('password')?.invalid && form.get('password')?.touched) || message">
-            {{ message || 'Password is required' }}
+          {{ message || 'Password is required' }}
         </mat-error>
-    </mat-form-field>
-    <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid || form.disabled">Login</button>
-</form>
+      </mat-form-field>
+      <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid || form.disabled">
+        Sign in
+        <mat-icon>arrow_forward</mat-icon>
+      </button>
+    </form>
+    <span class="login-security"><mat-icon>verified_user</mat-icon> Protected administration</span>
+  </div>
+</div>

@@ -1,90 +1,71 @@
-<form *ngIf="form as f" autocomplete="off" [formGroup]="f" (ngSubmit)="save()">
-  <mat-accordion displayMode="flat">
-    <mat-expansion-panel (afterCollapse)="accessComponent.closeAll()">
-      <mat-expansion-panel-header>
-        <mat-panel-title>
-          <mat-icon>manage_accounts</mat-icon>
-          Access
-          <mat-icon *ngIf="f.get('access')?.invalid" color="warn">error</mat-icon>
-        </mat-panel-title>
-      </mat-expansion-panel-header>
-      <ember-scanner-admin-access #accessComponent [form]="access"></ember-scanner-admin-access>
-    </mat-expansion-panel>
-    <mat-expansion-panel (afterCollapse)="apikeyComponent.closeAll()">
-      <mat-expansion-panel-header>
-        <mat-panel-title>
-          <mat-icon>vpn_key</mat-icon>
-          ApiKey
-          <mat-icon *ngIf="f.get('apikey')?.invalid" color="warn">error</mat-icon>
-        </mat-panel-title>
-      </mat-expansion-panel-header>
-      <ember-scanner-admin-apikeys #apikeyComponent [form]="apikeys"></ember-scanner-admin-apikeys>
-    </mat-expansion-panel>
-    <mat-expansion-panel *ngIf="!docker" (afterCollapse)="dirwatchComponent.closeAll()">
-      <mat-expansion-panel-header>
-        <mat-panel-title>
-          <mat-icon>folder</mat-icon>
-          Dirwatch
-          <mat-icon *ngIf="f.get('dirwatch')?.invalid" color="warn">error</mat-icon>
-        </mat-panel-title>
-      </mat-expansion-panel-header>
-      <ember-scanner-admin-dirwatch #dirwatchComponent [form]="dirwatch"></ember-scanner-admin-dirwatch>
-    </mat-expansion-panel>
-    <mat-expansion-panel (afterCollapse)="downstreamsComponent.closeAll()">
-      <mat-expansion-panel-header>
-        <mat-panel-title>
-          <mat-icon>share</mat-icon>
-          Downstreams
-          <mat-icon *ngIf="f.get('downstreams')?.invalid" color="warn">error</mat-icon>
-        </mat-panel-title>
-      </mat-expansion-panel-header>
-      <ember-scanner-admin-downstreams #downstreamsComponent [form]="downstreams"></ember-scanner-admin-downstreams>
-    </mat-expansion-panel>
-    <mat-expansion-panel>
-      <mat-expansion-panel-header>
-        <mat-panel-title>
-          <mat-icon>workspaces</mat-icon>
-          Groups
-          <mat-icon *ngIf="f.get('groups')?.invalid" color="warn">error</mat-icon>
-        </mat-panel-title>
-      </mat-expansion-panel-header>
-      <ember-scanner-admin-groups [form]="groups"></ember-scanner-admin-groups>
-    </mat-expansion-panel>
-    <mat-expansion-panel>
-      <mat-expansion-panel-header>
-        <mat-panel-title>
-          <mat-icon>tune</mat-icon>
-          Options
-          <mat-icon *ngIf="f.get('options')?.invalid" color="warn">error</mat-icon>
-        </mat-panel-title>
-      </mat-expansion-panel-header>
-      <ember-scanner-admin-options [form]="options"></ember-scanner-admin-options>
-    </mat-expansion-panel>
-    <mat-expansion-panel (afterCollapse)="systemsComponent.closeAll()">
-      <mat-expansion-panel-header>
-        <mat-panel-title>
-          <mat-icon>podcasts</mat-icon>
-          Systems
-          <mat-icon *ngIf="f.get('systems')?.invalid" color="warn">error</mat-icon>
-        </mat-panel-title>
-      </mat-expansion-panel-header>
-      <ember-scanner-admin-systems #systemsComponent [form]="systems"></ember-scanner-admin-systems>
-    </mat-expansion-panel>
-    <mat-expansion-panel>
-      <mat-expansion-panel-header>
-        <mat-panel-title>
-          <mat-icon>sell</mat-icon>
-          Tags
-          <mat-icon *ngIf="f.get('tags')?.invalid" color="warn">error</mat-icon>
-        </mat-panel-title>
-      </mat-expansion-panel-header>
-      <ember-scanner-admin-tags [form]="tags"></ember-scanner-admin-tags>
-    </mat-expansion-panel>
-  </mat-accordion>
-  <div class="row bottom">
-    <button type="button" mat-raised-button [disabled]="f.disabled || f.pristine"
-    (click)="reset()">Reset</button>
-    <button type="submit" mat-raised-button color="primary"
-    [disabled]="f.disabled || f.pristine || !f.valid">Save</button>
+<form *ngIf="form as f" autocomplete="off" [formGroup]="f" (ngSubmit)="save()" class="settings-shell">
+  <aside class="settings-sidebar" aria-label="Configuration sections">
+    <div class="settings-sidebar-heading">
+      <span>Settings</span>
+      <small>Choose a category</small>
+    </div>
+    <nav class="settings-nav">
+      @for (item of sections; track item.id) {
+        @if (!item.hideInDocker || !docker) {
+          <button type="button" [class.active]="activeSection === item.id" (click)="selectSection(item.id)">
+            <mat-icon>{{ item.icon }}</mat-icon>
+            <span>{{ item.label }}</span>
+            @if (f.get(item.control)?.invalid) {
+              <mat-icon class="settings-error" color="warn">error</mat-icon>
+            }
+          </button>
+        }
+      }
+    </nav>
+  </aside>
+
+  <div class="settings-content">
+    <header class="settings-header">
+      <div class="settings-title-icon"><mat-icon>{{ activeNavigation.icon }}</mat-icon></div>
+      <div>
+        <h2>{{ activeNavigation.label }}</h2>
+        <p>{{ activeNavigation.description }}</p>
+      </div>
+    </header>
+
+    <div class="settings-body">
+      @switch (activeSection) {
+        @case ('access') {
+          <ember-scanner-admin-access [form]="access"></ember-scanner-admin-access>
+        }
+        @case ('apikeys') {
+          <ember-scanner-admin-apikeys [form]="apikeys"></ember-scanner-admin-apikeys>
+        }
+        @case ('dirwatch') {
+          <ember-scanner-admin-dirwatch [form]="dirwatch"></ember-scanner-admin-dirwatch>
+        }
+        @case ('downstreams') {
+          <ember-scanner-admin-downstreams [form]="downstreams"></ember-scanner-admin-downstreams>
+        }
+        @case ('groups') {
+          <ember-scanner-admin-groups [form]="groups"></ember-scanner-admin-groups>
+        }
+        @case ('options') {
+          <ember-scanner-admin-options [form]="options"></ember-scanner-admin-options>
+        }
+        @case ('systems') {
+          <ember-scanner-admin-systems [form]="systems"></ember-scanner-admin-systems>
+        }
+        @case ('tags') {
+          <ember-scanner-admin-tags [form]="tags"></ember-scanner-admin-tags>
+        }
+      }
+    </div>
+
+    <footer class="settings-actions">
+      <span class="settings-change-state" [class.visible]="f.dirty">
+        <mat-icon>edit</mat-icon>
+        Unsaved changes
+      </span>
+      <div>
+        <button type="button" mat-stroked-button [disabled]="f.disabled || f.pristine" (click)="reset()">Reset</button>
+        <button type="submit" mat-flat-button color="primary" [disabled]="f.disabled || f.pristine || !f.valid">Save changes</button>
+      </div>
+    </footer>
   </div>
 </form>

@@ -1,8 +1,69 @@
-form > button {
-  margin-top: 1rem;
+:host { display: block; }
+
+.login-shell {
+  align-items: center;
+  background:
+    radial-gradient(circle at 75% 10%, rgba(255, 107, 53, 0.13), transparent 28%),
+    #17191f;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
 }
 
-.mat-mdc-raised-button,
-.mat-mdc-form-field {
-  display: block;
+.login-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+  box-sizing: border-box;
+  max-width: 410px;
+  padding: 38px;
+  text-align: center;
+  width: 100%;
+
+  h1 { color: #18202f; font-size: 27px; letter-spacing: -0.03em; margin: 7px 0 7px; }
+  > p { color: #667085; font-size: 13px; margin: 0 0 28px; }
+}
+
+.login-brand-mark {
+  align-items: center;
+  background: #ff6b35;
+  border-radius: 11px;
+  color: white;
+  display: flex;
+  height: 46px;
+  justify-content: center;
+  margin: 0 auto 15px;
+  width: 46px;
+}
+
+.login-eyebrow { color: #ff6b35; font-size: 10px; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase; }
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+
+  .mat-mdc-form-field { width: 100%; }
+  > button { min-height: 44px; width: 100%; }
+  > button .mat-icon { margin-left: 7px; }
+}
+
+.login-security {
+  align-items: center;
+  color: #98a2b3;
+  display: flex;
+  font-size: 10px;
+  gap: 5px;
+  justify-content: center;
+  margin-top: 22px;
+
+  .mat-icon { font-size: 14px; height: 14px; width: 14px; }
+}
+
+@media (max-width: 480px) {
+  .login-shell { padding: 16px; }
+  .login-card { padding: 30px 22px; }
 }

@@ -74,7 +74,7 @@ export class EmberScannerAdminTodosComponent implements OnDestroy, OnInit {
         if (this.passwordNeedChange) {
             todos.push({
                 level: 'warn',
-                message: 'You are using the default admin password, please change it from the tools / admin password menu.'
+                message: 'You are using the default admin password. Change it from Admin tools > Admin password.'
             });
         }
 

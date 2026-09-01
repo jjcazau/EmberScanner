@@ -1,38 +1,49 @@
-<mat-accordion displayMode="flat">
-    <mat-expansion-panel>
-        <mat-expansion-panel-header>
-            <mat-panel-title>
-                <mat-icon>description</mat-icon>
-                Import Talkgroups
-            </mat-panel-title>
-        </mat-expansion-panel-header>
+<div class="tools-layout" aria-label="Administration tools">
+  <button type="button" class="tool-card" [class.active]="activeTool === 'talkgroups'" (click)="selectTool('talkgroups')">
+    <span class="tool-card-icon"><mat-icon>library_add</mat-icon></span>
+    <strong>Import talkgroups</strong>
+    <small>Add talkgroup records from a supported data file.</small>
+  </button>
+  <button type="button" class="tool-card" [class.active]="activeTool === 'units'" (click)="selectTool('units')">
+    <span class="tool-card-icon"><mat-icon>badge</mat-icon></span>
+    <strong>Import units</strong>
+    <small>Add radio unit records in bulk from a data file.</small>
+  </button>
+  <button type="button" class="tool-card" [class.active]="activeTool === 'password'" (click)="selectTool('password')">
+    <span class="tool-card-icon"><mat-icon>password</mat-icon></span>
+    <strong>Admin password</strong>
+    <small>Update the password used to access this dashboard.</small>
+  </button>
+  <button type="button" class="tool-card" [class.active]="activeTool === 'config'" (click)="selectTool('config')">
+    <span class="tool-card-icon"><mat-icon>sync_alt</mat-icon></span>
+    <strong>Import or export</strong>
+    <small>Back up configuration or restore it from a file.</small>
+  </button>
+</div>
+
+<section class="tool-workspace">
+  <header class="tool-workspace-header">
+    @switch (activeTool) {
+      @case ('talkgroups') { <h2>Import talkgroups</h2><p>Bring talkgroup definitions into your current configuration.</p> }
+      @case ('units') { <h2>Import units</h2><p>Bring radio unit definitions into your current configuration.</p> }
+      @case ('password') { <h2>Change admin password</h2><p>Use a strong, unique password to protect server administration.</p> }
+      @case ('config') { <h2>Configuration transfer</h2><p>Download a backup or restore settings from a previous export.</p> }
+    }
+  </header>
+  <div class="tool-workspace-body">
+    @switch (activeTool) {
+      @case ('talkgroups') {
         <ember-scanner-admin-import-talkgroups (config)="config.emit($event)"></ember-scanner-admin-import-talkgroups>
-    </mat-expansion-panel>
-    <mat-expansion-panel>
-        <mat-expansion-panel-header>
-            <mat-panel-title>
-                <mat-icon>description</mat-icon>
-                Import Units
-            </mat-panel-title>
-        </mat-expansion-panel-header>
+      }
+      @case ('units') {
         <ember-scanner-admin-import-units (config)="config.emit($event)"></ember-scanner-admin-import-units>
-    </mat-expansion-panel>
-    <mat-expansion-panel>
-        <mat-expansion-panel-header>
-            <mat-panel-title>
-                <mat-icon>password</mat-icon>
-                Admin password
-            </mat-panel-title>
-        </mat-expansion-panel-header>
+      }
+      @case ('password') {
         <ember-scanner-admin-password></ember-scanner-admin-password>
-    </mat-expansion-panel>
-    <mat-expansion-panel>
-        <mat-expansion-panel-header>
-            <mat-panel-title>
-                <mat-icon>sync_alt</mat-icon>
-                Import/export config
-            </mat-panel-title>
-        </mat-expansion-panel-header>
+      }
+      @case ('config') {
         <ember-scanner-admin-import-export-config (config)="config.emit($event)"></ember-scanner-admin-import-export-config>
-    </mat-expansion-panel>
-</mat-accordion>
+      }
+    }
+  </div>
+</section>
