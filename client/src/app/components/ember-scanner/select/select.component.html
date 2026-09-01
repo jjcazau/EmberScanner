@@ -22,23 +22,32 @@
       <legend>
         {{ system.label }}
       </legend>
-      <div>
-        @for (talkgroup of system.talkgroups; track talkgroup) {
-          <button class="ember-button"
-            [ngClass]="{ off: !(map[system.id] && map[system.id][talkgroup.id]).active, on: map[system.id] && map[system.id][talkgroup.id].active, blink: map[system.id][talkgroup.id].minutes }"
-            (click)="avoid({ system: system, talkgroup: talkgroup })">
-            {{ talkgroup.label }}
-          </button>
+      <div class="talkgroup-groups">
+        @for (group of talkgroupGroups[system.id]; track group.label) {
+          <section class="talkgroup-group" [attr.aria-labelledby]="'talkgroup-group-' + system.id + '-' + $index">
+            <h3 [id]="'talkgroup-group-' + system.id + '-' + $index">{{ group.label }}</h3>
+            <div class="talkgroup-buttons">
+              @for (talkgroup of group.talkgroups; track talkgroup.id) {
+                <button class="ember-button"
+                  [ngClass]="{ off: !(map[system.id] && map[system.id][talkgroup.id]).active, on: map[system.id] && map[system.id][talkgroup.id].active, blink: map[system.id][talkgroup.id].minutes }"
+                  (click)="avoid({ system: system, talkgroup: talkgroup })">
+                  {{ talkgroup.label }}
+                </button>
+              }
+            </div>
+          </section>
         }
-        @if (system.talkgroups.length > 1) {
+      </div>
+      @if (system.talkgroups.length > 1) {
+        <div class="system-actions">
           <button class="ember-button-mini all-off" (click)="avoid({ system: system, status: false })">
             OFF
           </button>
           <button class="ember-button-mini all-on" (click)="avoid({ system: system, status: true })">
             ON
           </button>
-        }
-      </div>
+        </div>
+      }
     </fieldset>
   }
 }

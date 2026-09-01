@@ -26,8 +26,14 @@ import {
     EmberScannerEvent,
     EmberScannerLivefeedMap,
     EmberScannerSystem,
+    EmberScannerTalkgroup,
 } from '../ember-scanner';
 import { EmberScannerService } from '../ember-scanner.service';
+
+interface EmberScannerTalkgroupGroup {
+    label: string;
+    talkgroups: EmberScannerTalkgroup[];
+}
 
 @Component({
     selector: 'ember-scanner-select',
@@ -44,6 +50,8 @@ export class EmberScannerSelectComponent implements OnDestroy {
     map: EmberScannerLivefeedMap = {};
 
     systems: EmberScannerSystem[] | undefined;
+
+    talkgroupGroups: { [systemId: number]: EmberScannerTalkgroupGroup[] } = {};
 
     private eventSubscription;
 
@@ -85,8 +93,31 @@ export class EmberScannerSelectComponent implements OnDestroy {
     }
 
     private eventHandler(event: EmberScannerEvent): void {
-        if (event.config) this.systems = event.config.systems;
+        if (event.config) {
+            this.systems = event.config.systems;
+            this.talkgroupGroups = this.groupTalkgroups(event.config.systems);
+        }
         if (event.categories) this.categories = event.categories;
         if (event.map) this.map = event.map;
+    }
+
+    private groupTalkgroups(systems: EmberScannerSystem[]): { [systemId: number]: EmberScannerTalkgroupGroup[] } {
+        return systems.reduce((groupedSystems, system) => {
+            const groups = new Map<string, EmberScannerTalkgroup[]>();
+
+            system.talkgroups.forEach((talkgroup) => {
+                const labels = Array.from(new Set(talkgroup.groups?.filter((label) => label.trim()) || []));
+
+                (labels.length ? labels : ['Ungrouped']).forEach((label) => {
+                    const talkgroups = groups.get(label) || [];
+                    talkgroups.push(talkgroup);
+                    groups.set(label, talkgroups);
+                });
+            });
+
+            groupedSystems[system.id] = Array.from(groups, ([label, talkgroups]) => ({ label, talkgroups }));
+
+            return groupedSystems;
+        }, {} as { [systemId: number]: EmberScannerTalkgroupGroup[] });
     }
 }

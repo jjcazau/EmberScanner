@@ -139,3 +139,17 @@ func TestIngestCallRepairsGeneratedTalkgroupLabel(t *testing.T) {
 		t.Fatalf("talkgroup = %#v, found=%v", got, ok)
 	}
 }
+
+func TestAutoPopulatedTalkgroupNameUsesGroupAndAlias(t *testing.T) {
+	got := autoPopulatedTalkgroupName([]string{"Fire Dispatch"}, "GASTON-FIRE", 1514000)
+	if got != "Fire Dispatch GASTON-FIRE" {
+		t.Fatalf("name = %q, want %q", got, "Fire Dispatch GASTON-FIRE")
+	}
+}
+
+func TestAutoPopulatedTalkgroupNameFallsBackWithoutGroup(t *testing.T) {
+	got := autoPopulatedTalkgroupName([]string{"Unknown"}, "GASTON-FIRE", 1514000)
+	if got != "Talkgroup 1514000" {
+		t.Fatalf("name = %q, want %q", got, "Talkgroup 1514000")
+	}
+}

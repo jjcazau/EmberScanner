@@ -28,6 +28,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -88,6 +89,20 @@ func NewController(config *Config) *Controller {
 	controller.Logs.setDatabase(controller.Database)
 
 	return controller
+}
+
+func autoPopulatedTalkgroupName(groupLabels []string, talkgroupLabel string, talkgroupRef uint) string {
+	label := strings.TrimSpace(talkgroupLabel)
+	if label != "" {
+		for _, groupLabel := range groupLabels {
+			group := strings.TrimSpace(groupLabel)
+			if group != "" && !strings.EqualFold(group, "Unknown") {
+				return group + " " + label
+			}
+		}
+	}
+
+	return fmt.Sprintf("Talkgroup %d", talkgroupRef)
 }
 
 func (controller *Controller) EmitCall(call *Call) {
@@ -182,7 +197,7 @@ func (controller *Controller) IngestCall(call *Call) {
 		if len(call.Meta.TalkgroupName) > 0 {
 			call.Talkgroup.Name = call.Meta.TalkgroupName
 		} else if call.Talkgroup.Name == "" || call.Talkgroup.Name == fmt.Sprintf("Talkgroup %d", call.Talkgroup.TalkgroupRef) {
-			call.Talkgroup.Name = call.Meta.TalkgroupLabel
+			call.Talkgroup.Name = autoPopulatedTalkgroupName(call.Meta.TalkgroupGroups, call.Meta.TalkgroupLabel, call.Talkgroup.TalkgroupRef)
 		}
 		populated = true
 	}
@@ -270,7 +285,7 @@ func (controller *Controller) IngestCall(call *Call) {
 			if len(call.Meta.TalkgroupName) > 0 {
 				talkgroupName = call.Meta.TalkgroupName
 			} else {
-				talkgroupName = fmt.Sprintf("Talkgroup %d", call.Meta.TalkgroupRef)
+				talkgroupName = autoPopulatedTalkgroupName(groupLabels, talkgroupLabel, call.Meta.TalkgroupRef)
 			}
 
 			if tag, ok := controller.Tags.GetTagByLabel(tagLabel); ok {

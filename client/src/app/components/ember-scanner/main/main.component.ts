@@ -55,6 +55,7 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
     callDate: Date | undefined;
     callError = '0';
     callFrequency: string = this.formatFrequency(0);
+    callGroup = 'Group';
     callHistory: EmberScannerCall[] = [];
     callPrevious: EmberScannerCall | undefined;
     callProgress = new Date(0, 0, 0, 0, 0, 0);
@@ -725,6 +726,8 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
             }
 
             this.callSystem = displayCall.systemData?.label || `${displayCall.system}`;
+
+            this.callGroup = displayCall.talkgroupData?.groups?.join(' / ') || '';
 
             this.callTag = displayCall.talkgroupData?.tag || '';
 
