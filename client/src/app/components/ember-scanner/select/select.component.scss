@@ -43,7 +43,7 @@
     flex-wrap: wrap;
   }
 
-  > div:not(.talkgroup-groups) {
+  > div:not(.talkgroup-groups):not(.system-actions) {
     justify-content: space-evenly;
   }
 
