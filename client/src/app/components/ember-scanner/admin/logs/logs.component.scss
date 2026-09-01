@@ -1,56 +1,64 @@
-.error {
-  color: red;
-}
-
-.info {
-  color: green;
-}
-
-.warn {
-  color: orange;
-}
-
-.mat-mdc-cell,
-.mat-mdc-header-cell {
-  &:nth-child(1),
-  &:nth-child(2),
-  &:nth-child(3) {
-    flex: 0 0 60px;
-  }
-}
+.error { color: #d92d20; }
+.info { color: #356ad8; }
+.warn { color: #dc6803; }
 
 form {
   align-items: center;
+  background: #fafafa;
+  border: 1px solid var(--admin-border, #e5e7eb);
+  border-radius: 10px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(180px, 1fr)) auto;
+  margin-bottom: 20px;
+  padding: 16px;
+
+  .mat-mdc-form-field { width: 100%; }
+  .mat-mdc-form-field-subscript-wrapper { display: none; }
+}
+
+.reset {
+  align-items: center;
   display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-
-  .mat-mdc-form-field,
-  .reset {
-    box-sizing: border-box;
-    padding: 0 0.5rem 1rem 0.5rem;
-  }
-
-  .mat-mdc-form-field {
-    min-width: 220px;
-  }
-
-  .reset {
-    display: flex;
-    flex: 1;
-    flex-direction: row;
-    justify-content: space-between;
-  }
+  gap: 8px;
+  justify-content: flex-end;
 }
 
-@media (max-width: 719px) {
-  form > .mat-mdc-form-field {
-    flex: 100%;
-  }
+.logs-table-wrap {
+  border: 1px solid var(--admin-border, #e5e7eb);
+  border-radius: 10px;
+  overflow-x: auto;
 }
 
-@media (min-width: 720px) {
-  form > .mat-mdc-form-field {
-    flex: 33%;
-  }
+.mat-mdc-table { min-width: 680px; }
+
+.mat-mdc-header-cell {
+  color: #667085;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mat-mdc-header-row { background: #fafafa; min-height: 46px; }
+.mat-mdc-row { min-height: 50px; transition: background 120ms ease; }
+.mat-mdc-row:hover { background: #fcfcfd; }
+
+.mat-mdc-cell, .mat-mdc-header-cell {
+  &:nth-child(1), &:nth-child(2), &:nth-child(3) { flex: 0 0 72px; }
+}
+
+.mat-mdc-cell { color: #344054; font-size: 12px; }
+.mat-mdc-cell .mat-icon { font-size: 18px; height: 18px; width: 18px; }
+.mat-mdc-progress-bar { --mdc-linear-progress-track-height: 2px; --mdc-linear-progress-active-indicator-height: 2px; }
+.mat-mdc-paginator { background: transparent; }
+
+@media (max-width: 980px) {
+  form { grid-template-columns: repeat(2, minmax(180px, 1fr)); }
+}
+
+@media (max-width: 620px) {
+  form { grid-template-columns: 1fr; }
+  .reset { justify-content: stretch; }
+  .reset button { flex: 1; }
 }

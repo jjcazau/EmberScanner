@@ -2,6 +2,7 @@
 
 @use "./styles/material-icons" as *;
 @use "./styles/roboto-fonts" as *;
+@use "./styles/admin-polish" as *;
 
 @include mat.elevation-classes();
 @include mat.app-background();

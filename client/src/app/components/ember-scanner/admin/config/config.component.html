@@ -7,7 +7,8 @@
     <nav class="settings-nav">
       @for (item of sections; track item.id) {
         @if (!item.hideInDocker || !docker) {
-          <button type="button" [class.active]="activeSection === item.id" (click)="selectSection(item.id)">
+          <button type="button" [class.active]="activeSection === item.id" [attr.aria-label]="item.label"
+            [attr.title]="item.label" (click)="selectSection(item.id)">
             <mat-icon>{{ item.icon }}</mat-icon>
             <span>{{ item.label }}</span>
             @if (f.get(item.control)?.invalid) {

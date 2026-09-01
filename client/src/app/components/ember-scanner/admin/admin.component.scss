@@ -10,10 +10,11 @@ ember-scanner-admin {
   min-height: 100%;
 
   .admin-shell {
+    align-items: start;
     background: var(--admin-bg);
     display: grid;
     grid-template-columns: 248px minmax(0, 1fr);
-    min-height: calc(100vh - 32px);
+    min-height: 100vh;
   }
 
   .admin-sidebar {
@@ -22,8 +23,11 @@ ember-scanner-admin {
     color: #f8fafc;
     display: flex;
     flex-direction: column;
-    min-height: 100%;
+    height: 100vh;
+    overflow: hidden;
     padding: 24px 16px;
+    position: sticky;
+    top: 0;
   }
 
   .admin-brand {
@@ -87,7 +91,7 @@ ember-scanner-admin {
     padding-top: 16px;
   }
 
-  .admin-main { min-width: 0; }
+  .admin-main { min-height: 100vh; min-width: 0; }
 
   .admin-topbar {
     align-items: center;
@@ -97,6 +101,9 @@ ember-scanner-admin {
     justify-content: space-between;
     min-height: 100px;
     padding: 20px 36px;
+    position: sticky;
+    top: 0;
+    z-index: 5;
 
     h1 { color: var(--admin-text); font-size: 26px; font-weight: 650; letter-spacing: -0.025em; line-height: 1.2; margin: 3px 0 4px; }
     p { color: var(--admin-muted); font-size: 13px; margin: 0; }
@@ -110,21 +117,6 @@ ember-scanner-admin {
     text-transform: uppercase;
   }
 
-  .admin-status {
-    align-items: center;
-    background: #ecfdf3;
-    border: 1px solid #d1fadf;
-    border-radius: 999px;
-    color: #027a48;
-    display: flex;
-    font-size: 12px;
-    font-weight: 600;
-    gap: 7px;
-    padding: 7px 11px;
-  }
-
-  .admin-status-dot { background: #12b76a; border-radius: 50%; height: 7px; width: 7px; }
-
   .admin-content {
     box-sizing: border-box;
     margin: 0 auto;
@@ -134,7 +126,7 @@ ember-scanner-admin {
 
   .overview-hero {
     align-items: center;
-    background: linear-gradient(120deg, #242832, #17191f);
+    background: #20232b;
     border-radius: 16px;
     color: white;
     display: flex;
@@ -143,7 +135,6 @@ ember-scanner-admin {
     padding: 30px 32px;
     position: relative;
 
-    &::after { background: var(--admin-accent); border-radius: 50%; content: ''; height: 180px; opacity: 0.12; position: absolute; right: 18%; top: -90px; width: 180px; }
     h2 { font-size: 25px; font-weight: 600; letter-spacing: -0.02em; margin: 6px 0; }
     p { color: #c4c9d4; margin: 0; }
     button { z-index: 1; }
@@ -232,13 +223,14 @@ ember-scanner-admin {
 @media (max-width: 620px) {
   ember-scanner-admin {
     .admin-shell { display: block; }
-    .admin-sidebar { bottom: 0; flex-direction: row; left: 0; min-height: auto; padding: 8px; position: fixed; right: 0; z-index: 10; }
-    .admin-brand, .admin-nav-label, .admin-sidebar-footer { display: none; }
+    .admin-sidebar { bottom: 0; flex-direction: row; height: auto; left: 0; min-height: auto; padding: 8px; position: fixed; right: 0; top: auto; z-index: 10; }
+    .admin-brand, .admin-nav-label { display: none; }
     .admin-nav { display: grid; flex: 1; grid-template-columns: repeat(4, 1fr); }
     .admin-nav-item { min-height: 48px; }
+    .admin-sidebar-footer { border: 0; display: block; margin: 0; padding: 0; width: 20%; }
     .admin-topbar { min-height: 86px; padding: 16px 20px; }
     .admin-topbar h1 { font-size: 22px; }
-    .admin-topbar p, .admin-status { display: none; }
+    .admin-topbar p { display: none; }
     .admin-content { padding: 20px 16px 88px; }
     .overview-hero { align-items: flex-start; flex-direction: column; gap: 22px; padding: 24px; }
   }

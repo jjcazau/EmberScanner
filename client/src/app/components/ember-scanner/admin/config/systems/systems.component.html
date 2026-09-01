@@ -4,6 +4,14 @@
   systems to rearrange their order.</p>
   <button type="button" mat-button color="accent" (click)="add()">New system</button>
 </div>
+@if (!systems.length) {
+  <div class="record-empty">
+    <span><mat-icon>podcasts</mat-icon></span>
+    <h3>No radio systems yet</h3>
+    <p>Add a system manually, or enable Auto Populate in General settings.</p>
+    <button type="button" mat-flat-button color="primary" (click)="add()">Add your first system</button>
+  </div>
+}
 <mat-accordion *ngIf="systems" displayMode="flat" cdkDropList [cdkDropListAutoScrollStep]="64" [cdkDropListData]="systems" (cdkDropListDropped)="drop($event)">
   <mat-expansion-panel *ngFor="let system of systems; let i = index" [formGroup]="system"
     (afterCollapse)="systemComponent.closeAll()" cdkDrag>
