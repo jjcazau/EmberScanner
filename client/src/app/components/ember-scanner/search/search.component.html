@@ -1,170 +1,175 @@
-<div class="filter-toggle">
-  <button mat-stroked-button type="button" (click)="toggleFilters()"
-    [attr.aria-expanded]="filtersExpanded" aria-controls="search-filters">
-    <mat-icon>filter_list</mat-icon>
-    Filters
-    @if (activeFilterCount) {
-      <span class="filter-count">{{ activeFilterCount }}</span>
-    }
-    <mat-icon>{{ filtersExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
-  </button>
-</div>
-@if (filtersExpanded) {
-<mat-card id="search-filters" appearance="outlined" class="ember-filters">
-  <form autocomplete="off" [formGroup]="form">
-    <mat-form-field>
-      <mat-label>Sort order</mat-label>
-      <mat-select formControlName="sort" (selectionChange)="formChangeHandler()">
-        <mat-option [value]="1">Ascending</mat-option>
-        <mat-option [value]="-1">Descending</mat-option>
-      </mat-select>
-    </mat-form-field>
-    <mat-form-field>
-      <mat-label>Date</mat-label>
-      <input matInput type="datetime-local" formControlName="date" [max]="playbackList?.dateStop"
-        [min]="playbackList?.dateStart" placeholder="Choose a date" (change)="formChangeHandler()">
-    </mat-form-field>
-    <mat-form-field>
-      <mat-label>System</mat-label>
-      <mat-select formControlName="system" (selectionChange)="formChangeHandler()">
-        <mat-option [value]="-1">All Systems</mat-option>
-        @for (system of optionsSystem; track system; let i = $index) {
-          <mat-option [value]="i">{{ system }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
-    <mat-form-field>
-      <mat-label>Talkgroup</mat-label>
-      <mat-select formControlName="talkgroup" (selectionChange)="formChangeHandler()">
-        <mat-option [value]="-1">All Talkgroups</mat-option>
-        @for (talkgroup of optionsTalkgroup; track talkgroup; let i = $index) {
-          <mat-option [value]="i">{{ talkgroup }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
-    <mat-form-field>
-      <mat-label>Group</mat-label>
-      <mat-select formControlName="group" (selectionChange)="formChangeHandler()">
-        <mat-option [value]="-1">All Groups</mat-option>
-        @for (group of optionsGroup; track group; let i = $index) {
-          <mat-option [value]="i">{{ group }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
-    <mat-form-field>
-      <mat-label>Tag</mat-label>
-      <mat-select formControlName="tag" (selectionChange)="formChangeHandler()">
-        <mat-option [value]="-1">All Tags</mat-option>
-        @for (tag of optionsTag; track tag; let i = $index) {
-          <mat-option [value]="i">{{ tag }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
-    <mat-form-field>
-      <mat-label>Unit</mat-label>
-      <input type="number" matInput formControlName="unit" (change)="formChangeHandler()">
-      <mat-icon matSuffix>search</mat-icon>
-    </mat-form-field>
-    <div class="reset">
-      <button mat-raised-button type="button" [disabled]="resultsPending" (click)="resetForm()">
-        Reset filters
-      </button>
+<div class="search-controls">
+  <div class="search-heading">
+    <div>
+      <h1>Call archive</h1>
+      <p>Browse and play recorded calls.</p>
     </div>
-  </form>
-</mat-card>
-}
+    <button mat-stroked-button type="button" (click)="toggleFilters()"
+      [attr.aria-expanded]="filtersExpanded" aria-controls="search-filters">
+      <mat-icon>filter_list</mat-icon>
+      Filters@if (activeFilterCount) { · {{ activeFilterCount }} }
+      <mat-icon>{{ filtersExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+    </button>
+  </div>
+
+  @if (filtersExpanded) {
+    <mat-card id="search-filters" appearance="outlined" class="ember-filters">
+      <form autocomplete="off" [formGroup]="form">
+        <mat-form-field>
+          <mat-label>Sort order</mat-label>
+          <mat-select formControlName="sort" (selectionChange)="formChangeHandler()">
+            <mat-option [value]="1">Ascending</mat-option>
+            <mat-option [value]="-1">Descending</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Date</mat-label>
+          <input matInput type="datetime-local" formControlName="date" [max]="playbackList?.dateStop"
+            [min]="playbackList?.dateStart" placeholder="Choose a date" (change)="formChangeHandler()">
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>System</mat-label>
+          <mat-select formControlName="system" (selectionChange)="formChangeHandler()">
+            <mat-option [value]="-1">All Systems</mat-option>
+            @for (system of optionsSystem; track system; let i = $index) {
+              <mat-option [value]="i">{{ system }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Talkgroup</mat-label>
+          <mat-select formControlName="talkgroup" (selectionChange)="formChangeHandler()">
+            <mat-option [value]="-1">All Talkgroups</mat-option>
+            @for (talkgroup of optionsTalkgroup; track talkgroup; let i = $index) {
+              <mat-option [value]="i">{{ talkgroup }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Group</mat-label>
+          <mat-select formControlName="group" (selectionChange)="formChangeHandler()">
+            <mat-option [value]="-1">All Groups</mat-option>
+            @for (group of optionsGroup; track group; let i = $index) {
+              <mat-option [value]="i">{{ group }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Tag</mat-label>
+          <mat-select formControlName="tag" (selectionChange)="formChangeHandler()">
+            <mat-option [value]="-1">All Tags</mat-option>
+            @for (tag of optionsTag; track tag; let i = $index) {
+              <mat-option [value]="i">{{ tag }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Unit</mat-label>
+          <input type="number" matInput formControlName="unit" (change)="formChangeHandler()">
+          <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field>
+        <div class="reset">
+          <button mat-stroked-button type="button" [disabled]="resultsPending" (click)="resetForm()">Reset filters</button>
+        </div>
+      </form>
+    </mat-card>
+  }
+</div>
+
 <mat-card appearance="outlined" class="ember-list">
-  <mat-table [dataSource]="results">
-    <ng-container matColumnDef="control">
-      <mat-header-cell *matHeaderCellDef></mat-header-cell>
-      <mat-cell *matCellDef="let row" data-label="Action">
-        @if (downloadMode.checked && row) {
-          <button mat-icon-button (click)="download(+row.id)" aria-label="Download recording">
-            <mat-icon>save_alt</mat-icon>
-          </button>
-        }
-        @if (row && !downloadMode.checked && !paused && row?.id != call?.id && row?.id != callPending) {
-          <button
-            mat-icon-button (click)="play(+row.id)" aria-label="Play recording">
-            <mat-icon>play_arrow</mat-icon>
-          </button>
-        }
-        @if (row && !downloadMode.checked && row?.id == callPending) {
-          <button mat-icon-button aria-label="Loading recording">
-            <mat-icon class="spin">cached</mat-icon>
-          </button>
-        }
-        @if (row && !downloadMode.checked && row?.id == call?.id) {
-          <button mat-icon-button (click)="stop()" aria-label="Stop recording">
-            <mat-icon>stop</mat-icon>
-          </button>
-        }
-      </mat-cell>
-    </ng-container>
-    <ng-container matColumnDef="date">
-      <mat-header-cell *matHeaderCellDef>
-        <span>Date</span>
-      </mat-header-cell>
-      <mat-cell *matCellDef="let row" data-label="Date">
-        <span>{{ row?.dateTime | date:'MM/dd' }}</span>
-      </mat-cell>
-    </ng-container>
-    <ng-container matColumnDef="time">
-      <mat-header-cell *matHeaderCellDef [ngClass]="{'time12h': time12h}">
-        <span>Time</span>
-      </mat-header-cell>
-      <mat-cell *matCellDef="let row" data-label="Time" [ngClass]="{'time12h': time12h}">
-        <span>{{ row?.dateTime | date: time12h ? 'h:mm a' : 'HH:mm' }}</span>
-      </mat-cell>
-    </ng-container>
-    <ng-container matColumnDef="system">
-      <mat-header-cell *matHeaderCellDef>
-        <span>System</span>
-      </mat-header-cell>
-      <mat-cell *matCellDef="let row" data-label="System">
-        <span>{{ row?.systemData?.label || row?.system }}</span>
-      </mat-cell>
-    </ng-container>
-    <ng-container matColumnDef="alpha">
-      <mat-header-cell *matHeaderCellDef>
-        <span>Talkgroup</span>
-      </mat-header-cell>
-      <mat-cell *matCellDef="let row" data-label="Talkgroup">
-        <span>{{ row?.talkgroupData?.label || row?.talkgroup }}</span>
-      </mat-cell>
-    </ng-container>
-    <ng-container matColumnDef="name">
-      <mat-header-cell *matHeaderCellDef>
-        <span>Name</span>
-      </mat-header-cell>
-      <mat-cell *matCellDef="let row" data-label="Name">
-        <span>{{ row?.talkgroupData?.name }}</span>
-      </mat-cell>
-    </ng-container>
-    <mat-header-row *matHeaderRowDef="['control', 'date', 'time', 'system', 'alpha', 'name']">
-    </mat-header-row>
-    <mat-row *matRowDef="let row; columns: ['control', 'date', 'time', 'system', 'alpha', 'name']">
-    </mat-row>
-  </mat-table>
-  <mat-progress-bar color="primary" [mode]="resultsPending ? 'query' : 'determinate'">
-  </mat-progress-bar>
+  <div class="results-scroll">
+    <mat-table [dataSource]="results">
+      <ng-container matColumnDef="control">
+        <mat-header-cell *matHeaderCellDef></mat-header-cell>
+        <mat-cell *matCellDef="let row" data-label="Action">
+          @if (downloadMode.checked && row) {
+            <button mat-icon-button (click)="$event.stopPropagation(); download(+row.id)" aria-label="Download recording">
+              <mat-icon>save_alt</mat-icon>
+            </button>
+          }
+          @if (row && !downloadMode.checked && !paused && row?.id != call?.id && row?.id != callPending) {
+            <button mat-icon-button (click)="$event.stopPropagation(); play(+row.id)" aria-label="Play recording">
+              <mat-icon>play_arrow</mat-icon>
+            </button>
+          }
+          @if (row && !downloadMode.checked && row?.id == callPending) {
+            <button mat-icon-button disabled aria-label="Loading recording">
+              <mat-icon class="spin">cached</mat-icon>
+            </button>
+          }
+          @if (row && !downloadMode.checked && row?.id == call?.id) {
+            <button mat-icon-button (click)="$event.stopPropagation(); stop()" aria-label="Stop recording">
+              <mat-icon>stop</mat-icon>
+            </button>
+          }
+        </mat-cell>
+      </ng-container>
+
+      <ng-container matColumnDef="date">
+        <mat-header-cell *matHeaderCellDef><span>Date</span></mat-header-cell>
+        <mat-cell *matCellDef="let row" data-label="Date"><span>{{ row?.dateTime | date:'MM/dd' }}</span></mat-cell>
+      </ng-container>
+      <ng-container matColumnDef="time">
+        <mat-header-cell *matHeaderCellDef [ngClass]="{'time12h': time12h}"><span>Time</span></mat-header-cell>
+        <mat-cell *matCellDef="let row" data-label="Time" [ngClass]="{'time12h': time12h}">
+          <span>{{ row?.dateTime | date: time12h ? 'h:mm a' : 'HH:mm' }}</span>
+        </mat-cell>
+      </ng-container>
+      <ng-container matColumnDef="system">
+        <mat-header-cell *matHeaderCellDef><span>System</span></mat-header-cell>
+        <mat-cell *matCellDef="let row" data-label="System"><span>{{ row?.systemData?.label || row?.system }}</span></mat-cell>
+      </ng-container>
+      <ng-container matColumnDef="alpha">
+        <mat-header-cell *matHeaderCellDef><span>Talkgroup</span></mat-header-cell>
+        <mat-cell *matCellDef="let row" data-label="Talkgroup"><span>{{ row?.talkgroupData?.label || row?.talkgroup }}</span></mat-cell>
+      </ng-container>
+      <ng-container matColumnDef="name">
+        <mat-header-cell *matHeaderCellDef><span>Name</span></mat-header-cell>
+        <mat-cell *matCellDef="let row" data-label="Name"><span>{{ row?.talkgroupData?.name }}</span></mat-cell>
+      </ng-container>
+      <ng-container matColumnDef="mobile">
+        <mat-header-cell *matHeaderCellDef></mat-header-cell>
+        <mat-cell *matCellDef="let row" class="mobile-result">
+          @if (row) {
+            <strong>{{ row.talkgroupData?.name || row.talkgroupData?.label || row.talkgroup }}</strong>
+            <span>{{ row.systemData?.label || row.system }} · {{ row.talkgroupData?.label || row.talkgroup }}</span>
+            <small>{{ row.dateTime | date:'MM/dd' }} at {{ row.dateTime | date: time12h ? 'h:mm a' : 'HH:mm' }}</small>
+          }
+        </mat-cell>
+      </ng-container>
+
+      <mat-header-row *matHeaderRowDef="['control', 'date', 'time', 'system', 'alpha', 'name', 'mobile']"></mat-header-row>
+      <mat-row *matRowDef="let row; columns: ['control', 'date', 'time', 'system', 'alpha', 'name', 'mobile']"
+        [class.result-clickable]="!!row" [class.is-playing]="row?.id === call?.id"
+        [attr.role]="row ? 'button' : null" [attr.tabindex]="row ? 0 : -1"
+        [attr.aria-label]="row ? (downloadMode.checked ? 'Download recording' : row?.id === call?.id ? 'Stop recording' : 'Play recording') : null"
+        (click)="activateRow(row, downloadMode.checked)"
+        (keydown.enter)="activateRow(row, downloadMode.checked)"
+        (keydown.space)="$event.preventDefault(); activateRow(row, downloadMode.checked)">
+      </mat-row>
+    </mat-table>
+
+    <div #loadMoreTrigger class="load-more" aria-live="polite"
+      [attr.role]="hasMoreResults ? 'button' : null" [attr.tabindex]="hasMoreResults ? 0 : null"
+      (click)="loadMoreResults()" (keydown.enter)="loadMoreResults()">
+      @if (resultsPending) {
+        Loading recordings…
+      } @else if (!results.value.length) {
+        No recordings found
+      } @else if (hasMoreResults) {
+        Scroll for more
+      } @else {
+        All recordings loaded
+      }
+    </div>
+  </div>
+
+  <mat-progress-bar color="primary" [mode]="resultsPending ? 'query' : 'determinate'"></mat-progress-bar>
   <div class="results-footer">
-    <mat-slide-toggle #downloadMode color="primary" labelPosition="before">
+    <mat-slide-toggle #downloadMode color="primary" labelPosition="after" aria-label="Toggle download mode">
       <mat-icon>save_alt</mat-icon>
+      <span>Download</span>
     </mat-slide-toggle>
     <span>{{ results.value.length }} of {{ playbackList?.count || 0 }} recordings</span>
-  </div>
-  <div #loadMoreTrigger class="load-more" aria-live="polite"
-    [attr.role]="hasMoreResults ? 'button' : null" [attr.tabindex]="hasMoreResults ? 0 : null"
-    (click)="loadMoreResults()" (keydown.enter)="loadMoreResults()">
-    @if (resultsPending) {
-      Loading recordings…
-    } @else if (!results.value.length) {
-      No recordings found
-    } @else if (hasMoreResults) {
-      Scroll for more
-    } @else {
-      All recordings loaded
-    }
   </div>
 </mat-card>

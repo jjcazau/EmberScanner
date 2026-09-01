@@ -16,9 +16,16 @@
         </div>
     </mat-sidenav>
     <mat-sidenav-content>
-        <ember-scanner-main
+        <ember-scanner-main #mainComponent
             (openSearchPanel)="scrollTop(scrollableSearch); searchPanel.open(); searchComponent.searchCalls()"
             (toggleFullscreen)="toggleFullscreen()">
         </ember-scanner-main>
     </mat-sidenav-content>
 </mat-sidenav-container>
+@if (mainComponent.email) {
+  <div class="ember-help">
+    <button mat-icon-button (click)="mainComponent.showHelp()" aria-label="Help and support">
+      <mat-icon>help_center</mat-icon>
+    </button>
+  </div>
+}

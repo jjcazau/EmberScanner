@@ -111,6 +111,20 @@ export class EmberScannerSearchComponent implements AfterViewInit, OnDestroy {
         this.eventSubscription = this.emberScannerService.event.subscribe((event: EmberScannerEvent) => this.eventHandler(event));
     }
 
+    activateRow(row: EmberScannerCall | undefined, downloadMode: boolean): void {
+        if (!row?.id) {
+            return;
+        }
+
+        if (downloadMode) {
+            this.download(+row.id);
+        } else if (row.id === this.call?.id) {
+            this.stop();
+        } else if (!this.paused && row.id !== this.callPending) {
+            this.play(+row.id);
+        }
+    }
+
     download(id: number): void {
         this.emberScannerService.loadAndDownload(id);
     }

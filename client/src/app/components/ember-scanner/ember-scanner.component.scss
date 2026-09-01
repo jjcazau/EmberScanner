@@ -21,13 +21,33 @@ $background-color: rgb(30, 30, 30);
     background-color: inherit;
     color: inherit;
     height: inherit;
+    overscroll-behavior: none;
   }
 
   .mat-sidenav-content {
-    align-items: center;
+    align-items: flex-start;
     display: flex;
     flex-direction: row;
     justify-content: center;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: none;
+    scrollbar-gutter: stable;
+  }
+}
+
+.ember-help {
+  bottom: max(20px, env(safe-area-inset-bottom));
+  opacity: 0.48;
+  position: fixed;
+  right: max(20px, env(safe-area-inset-right));
+  transition: opacity 150ms ease, transform 150ms ease;
+  z-index: 3;
+
+  &:hover,
+  &:focus-within {
+    opacity: 1;
+    transform: translateY(-1px);
   }
 }
 
@@ -41,9 +61,18 @@ $background-color: rgb(30, 30, 30);
     justify-content: flex-end;
   }
 
+  &.search > div {
+    overflow: hidden;
+  }
+
+  &.search > div > div {
+    height: 100%;
+  }
+
   > div {
     flex: 1;
     height: 100%;
+    min-height: 0;
     overflow: auto;
   }
 
