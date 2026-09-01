@@ -41,7 +41,14 @@
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
+  }
+
+  > div:not(.talkgroup-groups) {
     justify-content: space-evenly;
+  }
+
+  .talkgroup-buttons {
+    justify-content: flex-start;
   }
 }
 
@@ -66,8 +73,15 @@
   }
 }
 
-.system-actions {
-  margin-top: 8px;
+.fieldset .system-actions {
+  flex-wrap: nowrap;
+  gap: 4px;
+  justify-content: flex-start;
+  margin-bottom: 8px;
+
+  .ember-button-mini {
+    margin: 0;
+  }
 }
 
 .ember-button {

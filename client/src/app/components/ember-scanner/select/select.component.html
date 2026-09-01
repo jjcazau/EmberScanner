@@ -22,6 +22,16 @@
       <legend>
         {{ system.label }}
       </legend>
+      @if (system.talkgroups.length > 1) {
+        <div class="system-actions">
+          <button class="ember-button-mini all-off" (click)="avoid({ system: system, status: false })">
+            OFF
+          </button>
+          <button class="ember-button-mini all-on" (click)="avoid({ system: system, status: true })">
+            ON
+          </button>
+        </div>
+      }
       <div class="talkgroup-groups">
         @for (group of talkgroupGroups[system.id]; track group.label) {
           <section class="talkgroup-group" [attr.aria-labelledby]="'talkgroup-group-' + system.id + '-' + $index">
@@ -38,16 +48,6 @@
           </section>
         }
       </div>
-      @if (system.talkgroups.length > 1) {
-        <div class="system-actions">
-          <button class="ember-button-mini all-off" (click)="avoid({ system: system, status: false })">
-            OFF
-          </button>
-          <button class="ember-button-mini all-on" (click)="avoid({ system: system, status: true })">
-            ON
-          </button>
-        </div>
-      }
     </fieldset>
   }
 }
