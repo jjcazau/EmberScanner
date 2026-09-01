@@ -30,14 +30,13 @@
             "assets": [
               "src/favicon.ico",
               "src/assets",
-              "src/manifest.webmanifest"
+              "src/manifest.webmanifest",
+              "src/ngsw-worker.js"
             ],
             "styles": [
               "src/styles.scss"
             ],
             "scripts": [],
-            "serviceWorker": true,
-            "ngswConfigPath": "ngsw-config.json",
             "main": "src/main.ts"
           },
           "configurations": {

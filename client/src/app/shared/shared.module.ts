@@ -22,7 +22,6 @@ import { ModuleWithProviders, NgModule } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ExtraOptions, RouterModule, Routes } from '@angular/router';
 import { AppMaterialModule } from './material/material.module';
-import { AppUpdateModule } from './update/update.module';
 
 export interface AppSharedModuleConfig {
     routerExtraOptions?: ExtraOptions;
@@ -32,7 +31,6 @@ export interface AppSharedModuleConfig {
 @NgModule({
     exports: [
         AppMaterialModule,
-        AppUpdateModule,
         CommonModule,
         FormsModule,
         ReactiveFormsModule,
@@ -53,7 +51,6 @@ export class AppSharedModule {
         return {
             ngModule: AppSharedModule,
             providers: [
-                ...AppUpdateModule.forRoot().providers || [],
                 ...RouterModule.forRoot(config.routerRoutes || [], config.routerExtraOptions || {}).providers || [],
             ],
         };

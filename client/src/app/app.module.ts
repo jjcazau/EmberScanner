@@ -20,8 +20,6 @@
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
-import { ServiceWorkerModule } from '@angular/service-worker';
-import { environment } from '../environments/environment';
 import { AppComponent } from './app.component';
 import { EmberScannerModule } from './components/ember-scanner/ember-scanner.module';
 import { AppSharedModule } from './shared/shared.module';
@@ -38,10 +36,6 @@ import { routes } from './app.routes';
         }),
         BrowserAnimationsModule,
         BrowserModule,
-        ServiceWorkerModule.register('ngsw-worker.js', {
-            enabled: environment.production,
-            registrationStrategy: 'registerWhenStable:10000',
-        }),
     ],
 })
 export class AppModule { }

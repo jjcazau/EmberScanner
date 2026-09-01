@@ -22,7 +22,6 @@ import { EventEmitter, Inject, Injectable, OnDestroy, DOCUMENT } from '@angular/
 import { Router } from '@angular/router';
 import { interval, Subscription, timer } from 'rxjs';
 import { takeWhile } from 'rxjs/operators';
-import { AppUpdateService } from '../../shared/update/update.service';
 import {
     EmberScannerAvoidOptions,
     EmberScannerBeepStyle,
@@ -123,7 +122,6 @@ export class EmberScannerService implements OnDestroy {
     private websocket: WebSocket | undefined;
 
     constructor(
-        appUpdateService: AppUpdateService,
         private router: Router,
         @Inject(DOCUMENT) private document: Document,
     ) {

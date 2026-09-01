@@ -22,7 +22,6 @@ import { EventEmitter, Injectable, OnDestroy } from '@angular/core';
 import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { firstValueFrom, timer } from 'rxjs';
-import { AppUpdateService } from '../../../shared/update/update.service';
 
 export interface Access {
     id?: string;
@@ -269,7 +268,6 @@ export class EmberScannerAdminService implements OnDestroy {
     }
 
     constructor(
-        appUpdateService: AppUpdateService,
         private matSnackBar: MatSnackBar,
         private ngFormBuilder: FormBuilder,
         private ngHttpClient: HttpClient,

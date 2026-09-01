@@ -38,6 +38,24 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+func writeWebappFile(w http.ResponseWriter, url string, contents []byte) {
+	extension := path.Ext(url)
+
+	if extension == ".html" {
+		w.Header().Set("Cache-Control", "no-store")
+	} else if url == "ngsw-worker.js" {
+		w.Header().Set("Cache-Control", "no-cache")
+	}
+
+	if extension == ".js" {
+		w.Header().Set("Content-Type", "text/javascript") // see https://github.com/golang/go/issues/32350
+	} else {
+		w.Header().Set("Content-Type", mime.TypeByExtension(extension))
+	}
+
+	w.Write(contents)
+}
+
 func main() {
 	const defaultAddr = "0.0.0.0"
 
@@ -168,19 +186,11 @@ func main() {
 			}
 
 			if b, err := webapp.ReadFile(path.Join("webapp", url)); err == nil {
-				var t string
-				switch path.Ext(url) {
-				case ".js":
-					t = "text/javascript" // see https://github.com/golang/go/issues/32350
-				default:
-					t = mime.TypeByExtension(path.Ext(url))
-				}
-				w.Header().Set("Content-Type", t)
-				w.Write(b)
+				writeWebappFile(w, url, b)
 
 			} else if url[:len(url)-1] != "/" {
 				if b, err := webapp.ReadFile("webapp/index.html"); err == nil {
-					w.Write(b)
+					writeWebappFile(w, "index.html", b)
 
 				} else {
 					w.WriteHeader(http.StatusNotFound)
