@@ -235,6 +235,22 @@ func TestIngestCallAutoPopulatesAndPersistsPatchedTalkgroups(t *testing.T) {
 	if len(stored.Patches) != 2 {
 		t.Fatalf("stored patches = %#v, want both patch members", stored.Patches)
 	}
+
+	results, err := controller.Calls.Search(&CallsSearchOptions{
+		Limit:     uint(30),
+		Sort:      -1,
+		System:    uint(1),
+		Talkgroup: uint(202),
+	}, &Client{Controller: controller})
+	if err != nil {
+		t.Fatalf("Search() error = %v", err)
+	}
+	if len(results.Results) != 1 || results.Results[0].Talkgroup != 101 {
+		t.Fatalf("patch-member search results = %#v", results.Results)
+	}
+	if len(results.Results[0].Patches) != 2 {
+		t.Fatalf("search result patches = %#v", results.Results[0].Patches)
+	}
 }
 
 func TestIngestCallDoesNotAutoPopulatePatchedTalkgroupsWhenDisabled(t *testing.T) {

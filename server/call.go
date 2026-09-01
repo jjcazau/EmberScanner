@@ -393,6 +393,10 @@ func (calls *Calls) Search(searchOptions *CallsSearchOptions, client *Client) (*
 		Results: []CallsSearchResult{},
 	}
 
+	patchedTalkgroupMatch := func(system uint, refs string) string {
+		return fmt.Sprintf(`(s."systemRef" = %d AND (t."talkgroupRef" IN %s OR EXISTS (SELECT 1 FROM "callPatches" AS cp LEFT JOIN "talkgroups" AS pt ON pt."talkgroupId" = cp."talkgroupId" WHERE cp."callId" = c."callId" AND pt."talkgroupRef" IN %s)))`, system, refs, refs)
+	}
+
 	if client.Access != nil {
 		switch v := client.Access.Systems.(type) {
 		case []any:
@@ -401,15 +405,22 @@ func (calls *Calls) Search(searchOptions *CallsSearchOptions, client *Client) (*
 				var c string
 				switch v := scope.(type) {
 				case map[string]any:
+					var systemRef uint
+					switch id := v["id"].(type) {
+					case float64:
+						systemRef = uint(id)
+					case uint:
+						systemRef = id
+					}
 					switch v["talkgroups"].(type) {
 					case []any:
 						b := strings.ReplaceAll(fmt.Sprintf("%v", v["talkgroups"]), " ", ", ")
 						b = strings.ReplaceAll(b, "[", "(")
 						b = strings.ReplaceAll(b, "]", ")")
-						c = fmt.Sprintf(`(s."systemRef" = %d AND t."talkgroupRef" IN %v)`, v["id"], b)
+						c = patchedTalkgroupMatch(systemRef, b)
 					case string:
 						if v["talkgroups"] == "*" {
-							c = fmt.Sprintf(`s."systemRef" = %d`, v["id"])
+							c = fmt.Sprintf(`s."systemRef" = %d`, systemRef)
 						}
 					}
 				}
@@ -423,14 +434,13 @@ func (calls *Calls) Search(searchOptions *CallsSearchOptions, client *Client) (*
 
 	switch v := searchOptions.System.(type) {
 	case uint:
-		a := []string{
-			fmt.Sprintf(`s."systemRef" = %d`, v),
-		}
-		switch v := searchOptions.Talkgroup.(type) {
+		systemRef := v
+		switch talkgroupRef := searchOptions.Talkgroup.(type) {
 		case uint:
-			a = append(a, fmt.Sprintf(`t."talkgroupRef" = %d`, v))
+			where += fmt.Sprintf(" AND %s", patchedTalkgroupMatch(systemRef, fmt.Sprintf("(%d)", talkgroupRef)))
+		default:
+			where += fmt.Sprintf(` AND s."systemRef" = %d`, systemRef)
 		}
-		where += fmt.Sprintf(" AND (%s)", strings.Join(a, " AND "))
 	}
 
 	switch v := searchOptions.Group.(type) {
@@ -438,7 +448,7 @@ func (calls *Calls) Search(searchOptions *CallsSearchOptions, client *Client) (*
 		a := []string{}
 		for id, m := range client.GroupsMap[v] {
 			in := strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(fmt.Sprintf("%v", m), " ", ", "), "[", "("), "]", ")")
-			a = append(a, fmt.Sprintf(`(s."systemRef" = %d AND t."talkgroupRef" IN %s)`, id, in))
+			a = append(a, patchedTalkgroupMatch(id, in))
 		}
 		if len(a) > 0 {
 			where += fmt.Sprintf(" AND (%s)", strings.Join(a, " OR "))
@@ -450,7 +460,7 @@ func (calls *Calls) Search(searchOptions *CallsSearchOptions, client *Client) (*
 		a := []string{}
 		for id, m := range client.TagsMap[v] {
 			in := strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(fmt.Sprintf("%v", m), " ", ", "), "[", "("), "]", ")")
-			a = append(a, fmt.Sprintf(`(s."systemRef" = %d AND t."talkgroupRef" IN %s)`, id, in))
+			a = append(a, patchedTalkgroupMatch(id, in))
 		}
 		if len(a) > 0 {
 			where += fmt.Sprintf(" AND (%s)", strings.Join(a, " OR "))
@@ -541,18 +551,31 @@ func (calls *Calls) Search(searchOptions *CallsSearchOptions, client *Client) (*
 		return nil, formatError(err, query)
 	}
 
-	query = fmt.Sprintf(`SELECT c."callId", c."timestamp", s."systemRef", t."talkgroupRef" FROM "calls" AS c LEFT JOIN "systems" AS s ON s."systemId" = c."systemId" LEFT JOIN "talkgroups" AS t ON t."talkgroupId" = c."talkgroupId" LEFT JOIN "delayed" AS d ON d."callId" = c."callId" WHERE %s ORDER BY c."timestamp" %s LIMIT %d OFFSET %d`, where, order, limit, offset)
+	patchesQuery := `(SELECT GROUP_CONCAT(pt."talkgroupRef") FROM "callPatches" AS cp LEFT JOIN "talkgroups" AS pt ON pt."talkgroupId" = cp."talkgroupId" WHERE cp."callId" = c."callId")`
+	if db.Config.DbType == DbTypePostgresql {
+		patchesQuery = `(SELECT STRING_AGG(CAST(pt."talkgroupRef" AS text), ',') FROM "callPatches" AS cp LEFT JOIN "talkgroups" AS pt ON pt."talkgroupId" = cp."talkgroupId" WHERE cp."callId" = c."callId")`
+	}
+
+	query = fmt.Sprintf(`SELECT c."callId", c."timestamp", s."systemRef", t."talkgroupRef", %s FROM "calls" AS c LEFT JOIN "systems" AS s ON s."systemId" = c."systemId" LEFT JOIN "talkgroups" AS t ON t."talkgroupId" = c."talkgroupId" LEFT JOIN "delayed" AS d ON d."callId" = c."callId" WHERE %s ORDER BY c."timestamp" %s LIMIT %d OFFSET %d`, patchesQuery, where, order, limit, offset)
 	if rows, err = db.Sql.Query(query); err != nil && err != sql.ErrNoRows {
 		return nil, formatError(err, query)
 	}
 
 	for rows.Next() {
-		searchResult := CallsSearchResult{}
-		if err = rows.Scan(&searchResult.Id, &timestamp, &searchResult.System, &searchResult.Talkgroup); err != nil {
+		searchResult := CallsSearchResult{Patches: []uint{}}
+		var patches sql.NullString
+		if err = rows.Scan(&searchResult.Id, &timestamp, &searchResult.System, &searchResult.Talkgroup, &patches); err != nil {
 			break
 		}
 
 		searchResult.Timestamp = time.UnixMilli(timestamp)
+		if patches.Valid {
+			for _, ref := range strings.Split(patches.String, ",") {
+				if value, parseErr := strconv.Atoi(ref); parseErr == nil && value > 0 {
+					searchResult.Patches = append(searchResult.Patches, uint(value))
+				}
+			}
+		}
 
 		searchResults.Results = append(searchResults.Results, searchResult)
 	}
@@ -718,6 +741,7 @@ func (searchOptions *CallsSearchOptions) fromMap(m map[string]any) *CallsSearchO
 
 type CallsSearchResult struct {
 	Id        uint64    `json:"id"`
+	Patches   []uint    `json:"patches"`
 	System    uint      `json:"system"`
 	Talkgroup uint      `json:"talkgroup"`
 	Timestamp time.Time `json:"dateTime"`

@@ -145,6 +145,38 @@ export class EmberScannerSearchComponent implements AfterViewInit, OnDestroy {
         }
     }
 
+    hasPatches(call: EmberScannerCall | undefined): boolean {
+        return !!call && this.emberScannerService.hasPatches(call);
+    }
+
+    talkgroupIds(call: EmberScannerCall | undefined): string {
+        if (!call) {
+            return '';
+        }
+
+        return this.talkgroupParticipants(call).map(({ ref }) => this.formatTalkgroupRef(call, ref)).join(' / ');
+    }
+
+    talkgroupLabels(call: EmberScannerCall | undefined): string {
+        if (!call) {
+            return '';
+        }
+
+        return this.talkgroupParticipants(call)
+            .map(({ ref, talkgroup }) => talkgroup?.label || this.formatTalkgroupRef(call, ref))
+            .join(' ↔ ');
+    }
+
+    talkgroupNames(call: EmberScannerCall | undefined): string {
+        if (!call) {
+            return '';
+        }
+
+        return this.talkgroupParticipants(call)
+            .map(({ ref, talkgroup }) => talkgroup?.name || `Talkgroup ${this.formatTalkgroupRef(call, ref)}`)
+            .join(' / ');
+    }
+
     ngAfterViewInit(): void {
         if (typeof IntersectionObserver === 'undefined' || !this.loadMoreTrigger) {
             return;
@@ -392,6 +424,26 @@ export class EmberScannerSearchComponent implements AfterViewInit, OnDestroy {
 
     private getSelectedGroup(): string | undefined {
         return this.optionsGroup[this.form.get('group')?.value ?? -1];
+    }
+
+    private formatTalkgroupRef(call: EmberScannerCall, ref: number): string {
+        if (call.systemData?.type === 'provoice' || call.talkgroupData?.type === 'provoice') {
+            return `${(ref >> 7 & 15).toString().padStart(2, '0')}-${(ref >> 3 & 15).toString().padStart(2, '0')}${ref & 7}`;
+        }
+
+        return `${ref}`;
+    }
+
+    private talkgroupParticipants(call: EmberScannerCall): { ref: number; talkgroup?: EmberScannerTalkgroup }[] {
+        const refs = [...new Set([call.talkgroup, ...(call.patches || [])].filter((ref) => ref > 0))];
+
+        return refs.map((ref) => ({
+            ref,
+            talkgroup: ref === call.talkgroup
+                ? call.talkgroupData
+                : call.patchTalkgroupData?.find((candidate) => candidate.id === ref)
+                    || call.systemData?.talkgroups.find((candidate) => candidate.id === ref),
+        }));
     }
 
     private getSelectedSystem(): EmberScannerSystem | undefined {

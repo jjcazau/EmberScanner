@@ -121,18 +121,35 @@
       </ng-container>
       <ng-container matColumnDef="alpha">
         <mat-header-cell *matHeaderCellDef><span>Talkgroup</span></mat-header-cell>
-        <mat-cell *matCellDef="let row" data-label="Talkgroup"><span>{{ row?.talkgroupData?.label || row?.talkgroup }}</span></mat-cell>
+        <mat-cell *matCellDef="let row" data-label="Talkgroup">
+          <div class="patch-result">
+            @if (hasPatches(row)) {
+              <span class="patch-badge">Patch</span>
+            }
+            <span [title]="talkgroupLabels(row) + ' · TGID ' + talkgroupIds(row)">{{ talkgroupLabels(row) }}</span>
+          </div>
+        </mat-cell>
       </ng-container>
       <ng-container matColumnDef="name">
         <mat-header-cell *matHeaderCellDef><span>Name</span></mat-header-cell>
-        <mat-cell *matCellDef="let row" data-label="Name"><span>{{ row?.talkgroupData?.name }}</span></mat-cell>
+        <mat-cell *matCellDef="let row" data-label="Name">
+          <div class="patch-result">
+            <span [title]="talkgroupNames(row)">{{ talkgroupNames(row) }}</span>
+          </div>
+        </mat-cell>
       </ng-container>
       <ng-container matColumnDef="mobile">
         <mat-header-cell *matHeaderCellDef></mat-header-cell>
         <mat-cell *matCellDef="let row" class="mobile-result">
           @if (row) {
-            <strong>{{ row.talkgroupData?.name || row.talkgroupData?.label || row.talkgroup }}</strong>
-            <span>{{ row.systemData?.label || row.system }} · {{ row.talkgroupData?.label || row.talkgroup }}</span>
+            <strong>
+              @if (hasPatches(row)) {
+                <span class="patch-badge">Patch</span>
+              }
+              {{ talkgroupNames(row) }}
+            </strong>
+            <span>{{ row.systemData?.label || row.system }} · {{ talkgroupLabels(row) }}</span>
+            <small>TGID {{ talkgroupIds(row) }}</small>
             <small>{{ row.dateTime | date:'MM/dd' }} at {{ row.dateTime | date: time12h ? 'h:mm a' : 'HH:mm' }}</small>
           }
         </mat-cell>
