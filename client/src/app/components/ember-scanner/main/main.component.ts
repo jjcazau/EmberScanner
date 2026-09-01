@@ -656,6 +656,52 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
             : '';
     }
 
+    talkgroupLabels(call: EmberScannerCall | undefined): string {
+        if (!call) {
+            return '';
+        }
+
+        return this.talkgroupParticipants(call).map(({ ref, label }) => {
+            return label || (this.isAfsSystem(call) ? this.formatAfs(ref) : `${ref}`);
+        }).join(' ↔ ');
+    }
+
+    talkgroupNames(call: EmberScannerCall | undefined): string {
+        if (!call) {
+            return '';
+        }
+
+        const participants = this.talkgroupParticipants(call);
+        return participants.map(({ ref, name }) => {
+            if (name) {
+                return name;
+            }
+            if (participants.length === 1 && ref === call.talkgroup) {
+                return this.formatFrequency(call.frequency);
+            }
+            return `Talkgroup ${this.isAfsSystem(call) ? this.formatAfs(ref) : ref}`;
+        }).join(' / ');
+    }
+
+    private talkgroupIds(call: EmberScannerCall): string {
+        return this.talkgroupParticipants(call).map(({ ref }) => {
+            return this.isAfsSystem(call) ? this.formatAfs(ref) : `${ref}`;
+        }).join(' / ');
+    }
+
+    private talkgroupParticipants(call: EmberScannerCall): { ref: number; label?: string; name?: string }[] {
+        const refs = [...new Set([call.talkgroup, ...(call.patches || [])].filter((ref) => ref > 0))];
+
+        return refs.map((ref) => {
+            const talkgroup = ref === call.talkgroup
+                ? call.talkgroupData
+                : call.patchTalkgroupData?.find((candidate) => candidate.id === ref)
+                    || call.systemData?.talkgroups?.find((candidate) => candidate.id === ref);
+
+            return { ref, label: talkgroup?.label, name: talkgroup?.name };
+        });
+    }
+
     private getLedColor(call: EmberScannerCall | undefined): string {
         const colors = ['blue', 'cyan', 'green', 'magenta', 'orange', 'red', 'white', 'yellow'];
 
@@ -714,8 +760,6 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
         const displayTime = this.call ? time : 0;
 
         if (displayCall) {
-            const isAfs = this.isAfsSystem(displayCall);
-
             this.callProgress = new Date(displayCall.dateTime);
             this.callProgress.setSeconds(this.callProgress.getSeconds() + displayTime);
 
@@ -731,9 +775,11 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
 
             this.callTag = displayCall.talkgroupData?.tag || '';
 
-            this.callTalkgroup = displayCall.talkgroupData?.label || `${isAfs ? this.formatAfs(displayCall.talkgroup) : displayCall.talkgroup}`;
+            this.callTalkgroup = this.talkgroupLabels(displayCall);
 
-            this.callTalkgroupName = displayCall.talkgroupData?.name || this.formatFrequency(displayCall.frequency);
+            this.callTalkgroupName = this.talkgroupNames(displayCall);
+
+            this.callTalkgroupId = this.talkgroupIds(displayCall);
 
             if (Array.isArray(displayCall.frequencies) && displayCall.frequencies.length) {
                 const frequency = displayCall.frequencies.reduce((p, v) => (v.pos || 0) <= displayTime ? v : p, {});
@@ -757,8 +803,6 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
             if (Array.isArray(displayCall.sources) && displayCall.sources.length) {
                 const source = displayCall.sources.reduce((p, v) => (v.pos || 0) <= displayTime ? v : p, {});
 
-                this.callTalkgroupId = isAfs ? this.formatAfs(displayCall.talkgroup) : displayCall.talkgroup.toString();
-
                 if (typeof source.src === 'number') {
                     if (Array.isArray(displayCall.systemData?.units)) {
                         this.callUnit = displayCall.systemData?.units?.find((u) => {
@@ -777,8 +821,6 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
                 }
 
             } else {
-                this.callTalkgroupId = isAfs ? this.formatAfs(displayCall.talkgroup) : displayCall.talkgroup.toString();
-
                 this.callUnit = displayCall.systemData?.units?.find((u) => u.id === displayCall.source)?.label ?? `${displayCall.source ?? ''}`;
             }
 
@@ -799,12 +841,12 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
 
             if (this.emberScannerService.isPatched(call)) {
                 this.avoided = false;
-                this.patched = true;
 
             } else {
                 this.avoided = this.emberScannerService.isAvoided(call);
-                this.patched = false;
             }
+
+            this.patched = this.emberScannerService.hasPatches(call);
         }
 
         this.ledStyle = this.call && this.livefeedPaused ? 'on paused' : this.call ? 'on' : 'off';

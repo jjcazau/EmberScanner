@@ -379,6 +379,18 @@ export class EmberScannerService implements OnDestroy {
         });
     }
 
+    hasPatches(call: EmberScannerCall): boolean {
+        const talkgroups = new Set<number>([call.talkgroup]);
+
+        call.patches?.forEach((talkgroup) => {
+            if (talkgroup > 0) {
+                talkgroups.add(talkgroup);
+            }
+        });
+
+        return talkgroups.size > 1;
+    }
+
     livefeed(): void {
         if (this.livefeedMode === EmberScannerLivefeedMode.Offline) {
             this.startLivefeed();
@@ -1347,6 +1359,11 @@ export class EmberScannerService implements OnDestroy {
 
             if (Array.isArray(call.systemData?.talkgroups)) {
                 call.talkgroupData = call.systemData?.talkgroups.find((talkgroup) => talkgroup.id === call.talkgroup);
+
+                const patchRefs = [...new Set((call.patches || []).filter((talkgroup) => talkgroup > 0 && talkgroup !== call.talkgroup))];
+                call.patchTalkgroupData = patchRefs
+                    .map((talkgroup) => call.systemData?.talkgroups.find((candidate) => candidate.id === talkgroup))
+                    .filter((talkgroup): talkgroup is NonNullable<typeof talkgroup> => talkgroup !== undefined);
             }
 
             if (call.talkgroupData?.frequency) {

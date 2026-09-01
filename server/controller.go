@@ -105,6 +105,57 @@ func autoPopulatedTalkgroupName(groupLabels []string, talkgroupLabel string, tal
 	return fmt.Sprintf("Talkgroup %d", talkgroupRef)
 }
 
+func (controller *Controller) ensureAutoPopulateGroups(labels []string) error {
+	for _, label := range labels {
+		if _, ok := controller.Groups.GetGroupByLabel(label); ok {
+			continue
+		}
+
+		controller.Groups.List = append(controller.Groups.List, &Group{Label: label})
+		if err := controller.Groups.Write(controller.Database); err != nil {
+			return err
+		}
+		if err := controller.Groups.Read(controller.Database); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (controller *Controller) ensureAutoPopulateTag(label string) (uint64, error) {
+	if _, ok := controller.Tags.GetTagByLabel(label); !ok {
+		controller.Tags.List = append(controller.Tags.List, &Tag{Label: label})
+		if err := controller.Tags.Write(controller.Database); err != nil {
+			return 0, err
+		}
+		if err := controller.Tags.Read(controller.Database); err != nil {
+			return 0, err
+		}
+	}
+
+	if tag, ok := controller.Tags.GetTagByLabel(label); ok {
+		return tag.Id, nil
+	}
+
+	return 0, nil
+}
+
+func uniquePatchRefs(refs []uint) []uint {
+	unique := make([]uint, 0, len(refs))
+	seen := map[uint]bool{}
+
+	for _, ref := range refs {
+		if ref == 0 || seen[ref] {
+			continue
+		}
+		seen[ref] = true
+		unique = append(unique, ref)
+	}
+
+	return unique
+}
+
 func (controller *Controller) EmitCall(call *Call) {
 	if controller.Delayer.CanDelay(call) {
 		controller.Delayer.Delay(call)
@@ -185,6 +236,8 @@ func (controller *Controller) IngestCall(call *Call) {
 		}
 	}
 
+	call.Patches = uniquePatchRefs(call.Patches)
+
 	// A prior auto-populated call may have created the compatibility
 	// talkgroup with its numeric reference as the label. Preserve any
 	// configured/manual label, but allow a later labeled upload to repair only
@@ -193,6 +246,24 @@ func (controller *Controller) IngestCall(call *Call) {
 		(controller.Options.AutoPopulate || call.System.AutoPopulate) &&
 		len(call.Meta.TalkgroupLabel) > 0 &&
 		(call.Talkgroup.Label == "" || call.Talkgroup.Label == fmt.Sprintf("%d", call.Talkgroup.TalkgroupRef)) {
+		groupLabels := call.Meta.TalkgroupGroups
+		if len(groupLabels) > 0 {
+			if err := controller.ensureAutoPopulateGroups(groupLabels); err != nil {
+				logError(err)
+				return
+			}
+			call.Talkgroup.GroupIds = controller.Groups.GetGroupIds(groupLabels)
+		}
+
+		if len(call.Meta.TalkgroupTag) > 0 {
+			tagId, err := controller.ensureAutoPopulateTag(call.Meta.TalkgroupTag)
+			if err != nil {
+				logError(err)
+				return
+			}
+			call.Talkgroup.TagId = tagId
+		}
+
 		call.Talkgroup.Label = call.Meta.TalkgroupLabel
 		if len(call.Meta.TalkgroupName) > 0 {
 			call.Talkgroup.Name = call.Meta.TalkgroupName
@@ -240,20 +311,9 @@ func (controller *Controller) IngestCall(call *Call) {
 				groupLabels = []string{"Unknown"}
 			}
 
-			for _, groupLabel := range groupLabels {
-				if _, ok := controller.Groups.GetGroupByLabel(groupLabel); !ok {
-					controller.Groups.List = append(controller.Groups.List, &Group{Label: groupLabel})
-
-					if err := controller.Groups.Write(controller.Database); err != nil {
-						logError(err)
-						return
-					}
-
-					if err := controller.Groups.Read(controller.Database); err != nil {
-						logError(err)
-						return
-					}
-				}
+			if err := controller.ensureAutoPopulateGroups(groupLabels); err != nil {
+				logError(err)
+				return
 			}
 
 			if len(call.Meta.TalkgroupTag) > 0 {
@@ -262,18 +322,10 @@ func (controller *Controller) IngestCall(call *Call) {
 				tagLabel = "Untagged"
 			}
 
-			if _, ok := controller.Tags.GetTagByLabel(tagLabel); !ok {
-				controller.Tags.List = append(controller.Tags.List, &Tag{Label: tagLabel})
-
-				if err := controller.Tags.Write(controller.Database); err != nil {
-					logError(err)
-					return
-				}
-
-				if err := controller.Tags.Read(controller.Database); err != nil {
-					logError(err)
-					return
-				}
+			tagId, err := controller.ensureAutoPopulateTag(tagLabel)
+			if err != nil {
+				logError(err)
+				return
 			}
 
 			if len(call.Meta.TalkgroupLabel) > 0 {
@@ -288,10 +340,6 @@ func (controller *Controller) IngestCall(call *Call) {
 				talkgroupName = autoPopulatedTalkgroupName(groupLabels, talkgroupLabel, call.Meta.TalkgroupRef)
 			}
 
-			if tag, ok := controller.Tags.GetTagByLabel(tagLabel); ok {
-				tagId = tag.Id
-			}
-
 			call.Talkgroup = &Talkgroup{
 				GroupIds:     controller.Groups.GetGroupIds(groupLabels),
 				Label:        talkgroupLabel,
@@ -301,6 +349,46 @@ func (controller *Controller) IngestCall(call *Call) {
 			}
 
 			call.System.Talkgroups.List = append(call.System.Talkgroups.List, call.Talkgroup)
+		}
+
+		if call.System != nil && len(call.Patches) > 0 {
+			const (
+				patchGroup = "Unknown"
+				patchTag   = "Untagged"
+			)
+
+			var missing []uint
+			for _, ref := range call.Patches {
+				if call.System.Blacklists.IsBlacklisted(ref) {
+					continue
+				}
+				if _, ok := call.System.Talkgroups.GetTalkgroupByRef(ref); !ok {
+					missing = append(missing, ref)
+				}
+			}
+
+			if len(missing) > 0 {
+				if err := controller.ensureAutoPopulateGroups([]string{patchGroup}); err != nil {
+					logError(err)
+					return
+				}
+				tagId, err := controller.ensureAutoPopulateTag(patchTag)
+				if err != nil {
+					logError(err)
+					return
+				}
+
+				for _, ref := range missing {
+					call.System.Talkgroups.List = append(call.System.Talkgroups.List, &Talkgroup{
+						GroupIds:     controller.Groups.GetGroupIds([]string{patchGroup}),
+						Label:        fmt.Sprintf("%d", ref),
+						Name:         fmt.Sprintf("Talkgroup %d", ref),
+						TalkgroupRef: ref,
+						TagId:        tagId,
+					})
+				}
+				populated = true
+			}
 		}
 
 		units := NewUnits()

@@ -48,8 +48,8 @@
       <span>{{ callProgress | date:timeFormat }}</span>
     </div>
   </div>
-  <div class="row big full">
-    <span>{{ callTalkgroupName }}</span>
+  <div class="row big full" [ngClass]="{ 'patch-members': patched }">
+    <span [title]="callTalkgroupName">{{ callTalkgroupName }}</span>
   </div>
   <div class="row">
     <div>
@@ -128,10 +128,10 @@
               <span>{{ previousCall?.systemData?.label || previousCall?.system}}</span>
             </td>
             <td>
-              <span>{{ previousCall?.talkgroupData?.label || previousCall?.talkgroup }}</span>
+              <span [title]="talkgroupLabels(previousCall)">{{ talkgroupLabels(previousCall) }}</span>
             </td>
             <td>
-              <span>{{ previousCall?.talkgroupData?.name || previousCall?.frequency }}</span>
+              <span [title]="talkgroupNames(previousCall)">{{ talkgroupNames(previousCall) }}</span>
             </td>
           </tr>
         }

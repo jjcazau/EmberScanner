@@ -52,6 +52,7 @@ export interface EmberScannerCall {
     groupsData?: EmberScannerGroupData[];
     id: number;
     patches: number[];
+    patchTalkgroupData?: EmberScannerTalkgroup[];
     source?: number;
     sources?: EmberScannerCallSource[];
     system: number;

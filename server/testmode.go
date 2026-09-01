@@ -30,17 +30,20 @@ type testTalkgroup struct {
 	groups         []string
 	tag            string
 	frequency      uint
+	patches        []uint
 }
 
 var testTalkgroups = []testTalkgroup{
-	{1, "Metro Fire", 101, "Dispatch", "Metro Fire Dispatch", []string{"Fire"}, "Fire Dispatch", 466125000},
-	{1, "Metro Fire", 102, "Fireground 1", "Metro Fireground 1", []string{"Fire"}, "Fire-Tac", 466225000},
-	{1, "Metro Fire", 103, "Rescue", "Rescue Operations", []string{"Fire", "Emergency"}, "Rescue", 466350000},
-	{2, "City Services", 201, "Roads", "Road Maintenance", []string{"Public Works"}, "Public Works", 474050000},
-	{2, "City Services", 202, "Transit", "Transit Operations", []string{"Transport"}, "Transportation", 474175000},
-	{2, "City Services", 203, "Utilities", "Water and Power", []string{"Public Works"}, "Utilities", 474300000},
-	{3, "Regional Safety", 301, "Operations", "Regional Operations", []string{"Emergency"}, "Emergency Ops", 488125000},
-	{3, "Regional Safety", 302, "Events", "Event Coordination", []string{"Emergency", "Interop"}, "Interop", 488275000},
+	{1, "Metro Fire", 101, "Dispatch", "Metro Fire Dispatch", []string{"Fire"}, "Fire Dispatch", 466125000, nil},
+	{1, "Metro Fire", 102, "Fireground 1", "Metro Fireground 1", []string{"Fire"}, "Fire-Tac", 466225000, nil},
+	{1, "Metro Fire", 103, "Rescue", "Rescue Operations", []string{"Fire", "Emergency"}, "Rescue", 466350000, nil},
+	{2, "City Services", 201, "Roads", "Road Maintenance", []string{"Public Works"}, "Public Works", 474050000, nil},
+	{2, "City Services", 202, "Transit", "Transit Operations", []string{"Transport"}, "Transportation", 474175000, nil},
+	{2, "City Services", 203, "Utilities", "Water and Power", []string{"Public Works"}, "Utilities", 474300000, nil},
+	{3, "Regional Safety", 301, "Operations", "Regional Operations", []string{"Emergency"}, "Emergency Ops", 488125000, nil},
+	{3, "Regional Safety", 302, "Events", "Event Coordination", []string{"Emergency", "Interop"}, "Interop", 488275000, nil},
+	{4, "Seasonal Districts", 401, "District 1", "District One Dispatch", []string{"Districts"}, "Law Dispatch", 489125000, []uint{401, 402}},
+	{4, "Seasonal Districts", 402, "District 2", "District Two Dispatch", []string{"Districts"}, "Law Dispatch", 489250000, nil},
 }
 
 // TestMode produces disposable scanner traffic for exercising the web client.
@@ -63,12 +66,33 @@ func (mode *TestMode) Populate(controller *Controller) error {
 	controller.Options.Branding = "Ember Scanner — Test Mode"
 
 	now := time.Now()
-	for i := testHistorySize; i > 0; i-- {
+	patchPrimary := testTalkgroups[len(testTalkgroups)-2]
+	patchMember := testTalkgroups[len(testTalkgroups)-1]
+
+	// Exercise the same lifecycle seen when SDRTrunk initially supplies only a
+	// patched ID: create its placeholder, then repair it when it becomes primary.
+	for i, fixture := range []testTalkgroup{patchPrimary, patchMember} {
+		call := mode.newFixtureCall(fixture, now.Add(-time.Duration(testHistorySize-i)*45*time.Second))
+		controller.IngestCall(call)
+		if call.Id == 0 {
+			return fmt.Errorf("test mode could not ingest patch fixture %d", i+1)
+		}
+	}
+
+	for i := testHistorySize - 2; i > 1; i-- {
 		call := mode.newCall(now.Add(-time.Duration(i) * 45 * time.Second))
 		controller.IngestCall(call)
 		if call.Id == 0 {
-			return fmt.Errorf("test mode could not ingest fixture %d", testHistorySize-i+1)
+			return fmt.Errorf("test mode could not ingest fixture %d", testHistorySize-i)
 		}
+	}
+
+	// Keep a resolved patched call as the newest history entry so the main UI
+	// immediately demonstrates its combined labels, names, IDs, and PATCH flag.
+	call := mode.newFixtureCall(patchPrimary, now.Add(-45*time.Second))
+	controller.IngestCall(call)
+	if call.Id == 0 {
+		return fmt.Errorf("test mode could not ingest resolved patch fixture")
 	}
 
 	controller.EmitConfig()
@@ -91,6 +115,10 @@ func (mode *TestMode) Start(controller *Controller) {
 
 func (mode *TestMode) newCall(timestamp time.Time) *Call {
 	fixture := testTalkgroups[mode.random.Intn(len(testTalkgroups))]
+	return mode.newFixtureCall(fixture, timestamp)
+}
+
+func (mode *TestMode) newFixtureCall(fixture testTalkgroup, timestamp time.Time) *Call {
 	duration := 900 + mode.random.Intn(1700)
 	frequencyJitter := uint(mode.random.Intn(5)) * 12500
 	unitRef := fixture.systemRef*1000 + uint(1+mode.random.Intn(24))
@@ -99,6 +127,7 @@ func (mode *TestMode) newCall(timestamp time.Time) *Call {
 		Audio:         generateTestWAV(mode.random, testAudioSampleRate, duration),
 		AudioFilename: fmt.Sprintf("test-%d-%d.wav", fixture.talkgroupRef, timestamp.UnixMilli()),
 		AudioMime:     "audio/wav",
+		Patches:       append([]uint(nil), fixture.patches...),
 		Frequencies: []CallFrequency{{
 			Dbm:       -(45 + mode.random.Intn(45)),
 			Errors:    uint(mode.random.Intn(4)),

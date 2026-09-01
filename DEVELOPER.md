@@ -28,7 +28,8 @@ go run . -base_dir ../.dev-data -listen :3000 --test
 ```
 
 `--test` creates an isolated `ember-scanner-test.db`, immediately populates it
-with random systems, talkgroups, units, call history, and playable synthetic WAV
+with random systems, talkgroups, units, call history, patched seasonal-district
+calls, and playable synthetic WAV
 audio, then emits a new test transmission every 4–10 seconds. Omit the flag when
 testing with recorder uploads or your own development database.
 
