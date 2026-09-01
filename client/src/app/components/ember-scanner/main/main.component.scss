@@ -210,15 +210,21 @@
   min-height: 1.5rem;
 
   .branding {
-    color: rgb(64, 64, 64);
+    // Keep the recessed, moulded-plastic character of the radio fascia while
+    // giving the letter faces enough luminance to remain readable at a glance.
+    color: rgb(174, 179, 182);
     flex: 1;
-    font-size: 16px;
-    font-weight: normal;
-    letter-spacing: 2px;
-    line-height: 1;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    line-height: 1.2;
     overflow: hidden;
+    padding: 2px 1px 3px;
     text-overflow: ellipsis;
-    text-shadow: -1px -1px 1px rgba(0, 0, 0, 0.7), 1px 1px 1px rgba(255, 255, 255, 0.3);
+    text-shadow:
+      -1px -1px 0 rgba(0, 0, 0, 0.95),
+      1px 1px 0 rgba(255, 255, 255, 0.22),
+      0 2px 3px rgba(0, 0, 0, 0.7);
     text-transform: uppercase;
     white-space: nowrap;
   }
@@ -291,4 +297,17 @@
 .ember-display,
 .ember-status {
   margin-bottom: 24px;
+}
+
+@media (max-width: 400px) {
+  .ember-status {
+    .branding {
+      font-size: 14px;
+      letter-spacing: 0.13em;
+    }
+
+    .led {
+      margin-left: 16px;
+    }
+  }
 }
