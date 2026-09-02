@@ -607,14 +607,14 @@ func (calls *Calls) WriteCall(call *Call, db *Database) (uint64, error) {
 	}
 
 	if db.Config.DbType == DbTypePostgresql {
-		query = fmt.Sprintf(`INSERT INTO "calls" ("audio", "audioFilename", "audioMime", "siteRef", "systemId", "talkgroupId", "timestamp") VALUES ($1, '%s', '%s', %d, %d, %d, %d) RETURNING "callId"`, call.AudioFilename, call.AudioMime, call.SiteRef, call.System.Id, call.Talkgroup.Id, call.Timestamp.UnixMilli())
+		query = `INSERT INTO "calls" ("audio", "audioFilename", "audioMime", "siteRef", "systemId", "talkgroupId", "timestamp") VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING "callId"`
 
-		err = tx.QueryRow(query, call.Audio).Scan(&call.Id)
+		err = tx.QueryRow(query, call.Audio, call.AudioFilename, call.AudioMime, call.SiteRef, call.System.Id, call.Talkgroup.Id, call.Timestamp.UnixMilli()).Scan(&call.Id)
 
 	} else {
-		query = fmt.Sprintf(`INSERT INTO "calls" ("audio", "audioFilename", "audioMime", "siteRef", "systemId", "talkgroupId", "timestamp") VALUES (?, '%s', '%s', %d, %d, %d, %d)`, call.AudioFilename, call.AudioMime, call.SiteRef, call.System.Id, call.Talkgroup.Id, call.Timestamp.UnixMilli())
+		query = `INSERT INTO "calls" ("audio", "audioFilename", "audioMime", "siteRef", "systemId", "talkgroupId", "timestamp") VALUES (?, ?, ?, ?, ?, ?, ?)`
 
-		if res, err = tx.Exec(query, call.Audio); err == nil {
+		if res, err = tx.Exec(query, call.Audio, call.AudioFilename, call.AudioMime, call.SiteRef, call.System.Id, call.Talkgroup.Id, call.Timestamp.UnixMilli()); err == nil {
 			if id, err := res.LastInsertId(); err == nil {
 				call.Id = uint64(id)
 			}

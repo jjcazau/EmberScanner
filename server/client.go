@@ -46,6 +46,8 @@ type Client struct {
 	request    *http.Request
 }
 
+const clientWebsocketReadLimit = 64 * 1024
+
 func (client *Client) Init(controller *Controller, request *http.Request, conn *websocket.Conn) error {
 	const (
 		pongWait   = 60 * time.Second
@@ -57,7 +59,7 @@ func (client *Client) Init(controller *Controller, request *http.Request, conn *
 		return errors.New("client.init: no websocket connection")
 	}
 
-	if controller.Clients.Count() >= int(controller.Options.MaxClients) {
+	if !controller.Clients.TryReserve(controller.Options.MaxClients) {
 		conn.Close()
 		return nil
 	}
@@ -68,9 +70,12 @@ func (client *Client) Init(controller *Controller, request *http.Request, conn *
 	client.Livefeed = NewLivefeed()
 	client.Send = make(chan *Message, 8192)
 	client.request = request
+	client.Conn.SetReadLimit(clientWebsocketReadLimit)
 
 	go func() {
 		defer func() {
+			controller.Clients.Release()
+
 			controller.Unregister <- client
 
 			if len(client.Access.Ident) > 0 {
@@ -122,8 +127,6 @@ func (client *Client) Init(controller *Controller, request *http.Request, conn *
 		})
 
 		defer func() {
-			client.Send = nil
-
 			ticker.Stop()
 
 			if timer != nil {
@@ -222,20 +225,42 @@ func (client *Client) SendListenersCount(count int) {
 }
 
 type Clients struct {
-	Map   map[*Client]bool
-	mutex sync.Mutex
+	active int
+	Map    map[*Client]bool
+	mutex  sync.RWMutex
+}
+
+func (clients *Clients) TryReserve(maximum uint) bool {
+	clients.mutex.Lock()
+	defer clients.mutex.Unlock()
+
+	if uint(clients.active) >= maximum {
+		return false
+	}
+
+	clients.active++
+	return true
+}
+
+func (clients *Clients) Release() {
+	clients.mutex.Lock()
+	defer clients.mutex.Unlock()
+
+	if clients.active > 0 {
+		clients.active--
+	}
 }
 
 func NewClients() *Clients {
 	return &Clients{
 		Map:   map[*Client]bool{},
-		mutex: sync.Mutex{},
+		mutex: sync.RWMutex{},
 	}
 }
 
 func (clients *Clients) AccessCount(client *Client) uint {
-	clients.mutex.Lock()
-	defer clients.mutex.Unlock()
+	clients.mutex.RLock()
+	defer clients.mutex.RUnlock()
 
 	count := uint(0)
 
@@ -256,14 +281,26 @@ func (clients *Clients) Add(client *Client) {
 }
 
 func (clients *Clients) Count() int {
+	clients.mutex.RLock()
+	defer clients.mutex.RUnlock()
+
 	return len(clients.Map)
 }
 
-func (clients *Clients) EmitCall(call *Call, restricted bool) {
-	clients.mutex.Lock()
-	defer clients.mutex.Unlock()
+func (clients *Clients) snapshot() []*Client {
+	clients.mutex.RLock()
+	defer clients.mutex.RUnlock()
 
-	for c := range clients.Map {
+	snapshot := make([]*Client, 0, len(clients.Map))
+	for client := range clients.Map {
+		snapshot = append(snapshot, client)
+	}
+
+	return snapshot
+}
+
+func (clients *Clients) EmitCall(call *Call, restricted bool) {
+	for _, c := range clients.snapshot() {
 		if (!restricted || c.Access.HasAccess(call)) && c.Livefeed.IsEnabled(call) {
 			c.Send <- &Message{Command: MessageCommandCall, Payload: call}
 		}
@@ -271,14 +308,12 @@ func (clients *Clients) EmitCall(call *Call, restricted bool) {
 }
 
 func (clients *Clients) EmitConfig(controller *Controller) {
-	clients.mutex.Lock()
-	defer clients.mutex.Unlock()
-
-	count := len(clients.Map)
+	snapshot := clients.snapshot()
+	count := len(snapshot)
 	restricted := controller.Accesses.IsRestricted()
 	showListenersCount := controller.Options.ShowListenersCount
 
-	for c := range clients.Map {
+	for _, c := range snapshot {
 		if restricted {
 			c.Send <- &Message{Command: MessageCommandPin}
 
@@ -293,12 +328,10 @@ func (clients *Clients) EmitConfig(controller *Controller) {
 }
 
 func (clients *Clients) EmitListenersCount() {
-	clients.mutex.Lock()
-	defer clients.mutex.Unlock()
+	snapshot := clients.snapshot()
+	count := len(snapshot)
 
-	count := len(clients.Map)
-
-	for c := range clients.Map {
+	for _, c := range snapshot {
 		c.SendListenersCount(count)
 	}
 }

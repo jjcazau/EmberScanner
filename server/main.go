@@ -26,10 +26,10 @@ import (
 	"io"
 	"log"
 	"mime"
+	"net"
 	"net/http"
 	"os"
 	"path"
-	"regexp"
 	"strings"
 	"time"
 
@@ -54,6 +54,25 @@ func writeWebappFile(w http.ResponseWriter, url string, contents []byte) {
 	}
 
 	w.Write(contents)
+}
+
+func securityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		contentSecurityPolicy := "default-src 'self'; base-uri 'self'; connect-src 'self' ws: wss:; font-src 'self'; form-action 'self'; img-src 'self' data:; media-src 'self' blob: data:; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; worker-src 'self' blob:"
+		if r.URL.Path == "/admin" || strings.HasPrefix(r.URL.Path, "/admin/") || strings.HasPrefix(r.URL.Path, "/api/admin/") {
+			contentSecurityPolicy += "; frame-ancestors 'none'"
+			w.Header().Set("X-Frame-Options", "DENY")
+		}
+		w.Header().Set("Content-Security-Policy", contentSecurityPolicy)
+		w.Header().Set("Referrer-Policy", "no-referrer")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+
+		if r.TLS != nil {
+			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
 
 func main() {
@@ -222,6 +241,7 @@ func main() {
 	newServer := func(addr string, tlsConfig *tls.Config) *http.Server {
 		s := &http.Server{
 			Addr:         addr,
+			Handler:      securityHeaders(http.DefaultServeMux),
 			TLSConfig:    tlsConfig,
 			ReadTimeout:  30 * time.Second,
 			WriteTimeout: 30 * time.Second,
@@ -281,17 +301,10 @@ func main() {
 }
 
 func GetRemoteAddr(r *http.Request) string {
-	re := regexp.MustCompile(`(.+):.*$`)
-
-	for _, addr := range strings.Split(r.Header.Get("X-Forwarded-For"), ",") {
-		if ip := re.ReplaceAllString(addr, "$1"); len(ip) > 0 {
-			return ip
-		}
+	addr := strings.TrimSpace(r.RemoteAddr)
+	if host, _, err := net.SplitHostPort(addr); err == nil {
+		return host
 	}
 
-	if ip := re.ReplaceAllString(r.RemoteAddr, "$1"); len(ip) > 0 {
-		return ip
-	}
-
-	return r.RemoteAddr
+	return addr
 }

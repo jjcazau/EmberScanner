@@ -399,26 +399,29 @@ export class EmberScannerAdminService implements OnDestroy {
     }
 
     async logout(): Promise<boolean> {
+        let loggedOut = false;
+
         try {
-            this.ngHttpClient.post(
+            await firstValueFrom(this.ngHttpClient.post(
                 this.getUrl(url.logout),
                 null,
                 { headers: this.getHeaders(), responseType: 'text' },
-            );
+            ));
 
+            loggedOut = true;
+
+        } catch (error) {
+            this.errorHandler(error);
+
+        } finally {
             this.configWebSocketClose();
 
             this.token = '';
 
             this.event.emit({ authenticated: this.authenticated });
-
-            return true;
-
-        } catch (error) {
-            this.errorHandler(error);
-
-            return false;
         }
+
+        return loggedOut;
     }
 
     async playAlert(name: string): Promise<void> {

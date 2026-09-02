@@ -21,6 +21,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -29,12 +30,72 @@ import (
 	"strings"
 )
 
+const (
+	maxUploadAudioBytes   int64 = 64 << 20
+	maxUploadFieldBytes   int64 = 1 << 20
+	maxUploadKeyBytes     int64 = 4 << 10
+	maxUploadRequestBytes int64 = maxUploadAudioBytes + (4 << 20)
+	maxUploadParts              = 64
+)
+
+var errUploadTooLarge = errors.New("upload exceeds the maximum allowed size")
+
 type Api struct {
 	Controller *Controller
 }
 
 func NewApi(controller *Controller) *Api {
 	return &Api{Controller: controller}
+}
+
+func uploadPartLimit(formName string) int64 {
+	switch formName {
+	case "audio":
+		return maxUploadAudioBytes
+	case "key":
+		return maxUploadKeyBytes
+	default:
+		return maxUploadFieldBytes
+	}
+}
+
+func readUploadPart(part *multipart.Part) ([]byte, error) {
+	limit := uploadPartLimit(part.FormName())
+	b, err := io.ReadAll(io.LimitReader(part, limit+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(b)) > limit {
+		return nil, fmt.Errorf("%w: multipart field %q exceeds the %d byte limit", errUploadTooLarge, part.FormName(), limit)
+	}
+	return b, nil
+}
+
+func (api *Api) prepareMultipartUpload(w http.ResponseWriter, r *http.Request) (*multipart.Reader, bool) {
+	mediaType, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	if err != nil {
+		api.exitWithError(w, http.StatusBadRequest, "Invalid content-type")
+		return nil, false
+	}
+	if !strings.HasPrefix(mediaType, "multipart/") || params["boundary"] == "" {
+		api.exitWithError(w, http.StatusBadRequest, "Not a multipart content")
+		return nil, false
+	}
+	if r.ContentLength > maxUploadRequestBytes {
+		api.exitWithError(w, http.StatusRequestEntityTooLarge, "Upload exceeds the maximum allowed size")
+		return nil, false
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, maxUploadRequestBytes)
+	return multipart.NewReader(r.Body, params["boundary"]), true
+}
+
+func (api *Api) exitWithMultipartError(w http.ResponseWriter, err error) {
+	var maxBytesError *http.MaxBytesError
+	if errors.As(err, &maxBytesError) || errors.Is(err, errUploadTooLarge) {
+		api.exitWithError(w, http.StatusRequestEntityTooLarge, "Upload exceeds the maximum allowed size")
+		return
+	}
+	api.exitWithError(w, http.StatusExpectationFailed, fmt.Sprintf("multipart: %s", err.Error()))
 }
 
 func (api *Api) CallUploadHandler(w http.ResponseWriter, r *http.Request) {
@@ -45,37 +106,38 @@ func (api *Api) CallUploadHandler(w http.ResponseWriter, r *http.Request) {
 			key  string
 		)
 
-		mediaType, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
-		if err != nil {
-			api.exitWithError(w, http.StatusBadRequest, "Invalid content-type")
+		mr, ok := api.prepareMultipartUpload(w, r)
+		if !ok {
 			return
 		}
 
-		if !strings.HasPrefix(mediaType, "multipart/") {
-			api.exitWithError(w, http.StatusBadRequest, "Not a multipart content")
-			return
-		}
-
-		mr := multipart.NewReader(r.Body, params["boundary"])
-
-		for {
+		for partCount := 0; ; {
 			p, err := mr.NextPart()
 			if err == io.EOF {
 				break
 			} else if err != nil {
-				api.exitWithError(w, http.StatusExpectationFailed, fmt.Sprintf("multipart: %s\n", err.Error()))
+				api.exitWithMultipartError(w, err)
+				return
+			}
+			partCount++
+			if partCount > maxUploadParts {
+				api.exitWithMultipartError(w, errUploadTooLarge)
 				return
 			}
 
-			b, err := io.ReadAll(p)
+			b, err := readUploadPart(p)
 			if err != nil {
-				api.exitWithError(w, http.StatusExpectationFailed, fmt.Sprintf("ioread: %s\n", err.Error()))
+				api.exitWithMultipartError(w, err)
 				return
 			}
 
 			switch p.FormName() {
 			case "key":
 				key = string(b)
+				if _, ok := api.Controller.Apikeys.GetApikey(key); !ok {
+					api.exitWithError(w, http.StatusUnauthorized, "Invalid API key")
+					return
+				}
 			default:
 				ParseMultipartContent(call, p, b)
 			}
@@ -123,39 +185,40 @@ func (api *Api) TrunkRecorderCallUploadHandler(w http.ResponseWriter, r *http.Re
 			key  string
 		)
 
-		mediaType, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
-		if err != nil {
-			api.exitWithError(w, http.StatusBadRequest, "Invalid content-type")
+		mr, ok := api.prepareMultipartUpload(w, r)
+		if !ok {
 			return
 		}
-
-		if !strings.HasPrefix(mediaType, "multipart/") {
-			api.exitWithError(w, http.StatusBadRequest, "Not a multipart content")
-			return
-		}
-
-		mr := multipart.NewReader(r.Body, params["boundary"])
 
 		parts := map[*multipart.Part][]byte{}
 
-		for {
+		for partCount := 0; ; {
 			p, err := mr.NextPart()
 			if err == io.EOF {
 				break
 			} else if err != nil {
-				api.exitWithError(w, http.StatusExpectationFailed, fmt.Sprintf("multipart: %s", err.Error()))
+				api.exitWithMultipartError(w, err)
+				return
+			}
+			partCount++
+			if partCount > maxUploadParts {
+				api.exitWithMultipartError(w, errUploadTooLarge)
 				return
 			}
 
-			b, err := io.ReadAll(p)
+			b, err := readUploadPart(p)
 			if err != nil {
-				api.exitWithError(w, http.StatusExpectationFailed, fmt.Sprintf("ioread: %s", err.Error()))
+				api.exitWithMultipartError(w, err)
 				return
 			}
 
 			switch p.FormName() {
 			case "key":
 				key = string(b)
+				if _, ok := api.Controller.Apikeys.GetApikey(key); !ok {
+					api.exitWithError(w, http.StatusUnauthorized, "Invalid API key")
+					return
+				}
 			case "meta":
 				if err := ParseTrunkRecorderMeta(call, b); err != nil {
 					api.exitWithError(w, http.StatusExpectationFailed, "Invalid call data")

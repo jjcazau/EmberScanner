@@ -68,7 +68,7 @@ enum WebsocketCommand {
 export class EmberScannerService implements OnDestroy {
     static LOCAL_STORAGE_KEY_LEGACY = 'ember-scanner';
     static LOCAL_STORAGE_KEY_LFM = 'ember-scanner-lfm';
-    static LOCAL_STORAGE_KEY_PIN = 'ember-scanner-pin';
+    static STORAGE_KEY_PIN = 'ember-scanner-pin';
 
     event = new EventEmitter<EmberScannerEvent>();
 
@@ -126,7 +126,7 @@ export class EmberScannerService implements OnDestroy {
         @Inject(DOCUMENT) private document: Document,
     ) {
         if (router.url.endsWith('/reset')) {
-            window?.localStorage?.clear();
+            this.clearStoredState();
 
             router.navigateByUrl(router.url.replace('/reset', ''), {
                 replaceUrl: true,
@@ -134,6 +134,9 @@ export class EmberScannerService implements OnDestroy {
 
             return;
         }
+
+        // Remove PINs persisted by older releases; credentials now live only for this browser tab.
+        window?.localStorage?.removeItem(EmberScannerService.STORAGE_KEY_PIN);
 
         this.bootstrapAudio();
 
@@ -259,7 +262,8 @@ export class EmberScannerService implements OnDestroy {
     }
 
     clearPin(): void {
-        window?.localStorage.removeItem(EmberScannerService.LOCAL_STORAGE_KEY_PIN);
+        window?.sessionStorage?.removeItem(EmberScannerService.STORAGE_KEY_PIN);
+        window?.localStorage?.removeItem(EmberScannerService.STORAGE_KEY_PIN);
     }
 
     holdSystem(options?: { resubscribe?: boolean }): void {
@@ -587,13 +591,12 @@ export class EmberScannerService implements OnDestroy {
     }
 
     readPin(): string | undefined {
-        const pin = window?.localStorage?.getItem(EmberScannerService.LOCAL_STORAGE_KEY_PIN);
-
-        return pin ? window.atob(pin) : undefined;
+        return window?.sessionStorage?.getItem(EmberScannerService.STORAGE_KEY_PIN) || undefined;
     }
 
     savePin(pin: string): void {
-        window?.localStorage?.setItem(EmberScannerService.LOCAL_STORAGE_KEY_PIN, window.btoa(pin));
+        window?.localStorage?.removeItem(EmberScannerService.STORAGE_KEY_PIN);
+        window?.sessionStorage?.setItem(EmberScannerService.STORAGE_KEY_PIN, pin);
     }
 
     searchCalls(options: EmberScannerSearchOptions, settings?: { append?: boolean }): void {
@@ -1256,6 +1259,22 @@ export class EmberScannerService implements OnDestroy {
         } catch (_) {
             //
         }
+    }
+
+    private clearStoredState(): void {
+        const keys: string[] = [];
+
+        for (let index = 0; index < window.localStorage.length; index++) {
+            const key = window.localStorage.key(index);
+            if (key === EmberScannerService.LOCAL_STORAGE_KEY_LEGACY
+                || key === EmberScannerService.STORAGE_KEY_PIN
+                || key?.startsWith(`${EmberScannerService.LOCAL_STORAGE_KEY_LFM}-`)) {
+                keys.push(key);
+            }
+        }
+
+        keys.forEach((key) => window.localStorage.removeItem(key));
+        window.sessionStorage.removeItem(EmberScannerService.STORAGE_KEY_PIN);
     }
 
     private rebuildCategories(): void {

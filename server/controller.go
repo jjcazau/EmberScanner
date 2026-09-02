@@ -167,8 +167,8 @@ func (controller *Controller) EmitCall(call *Call) {
 }
 
 func (controller *Controller) EmitConfig() {
-	go controller.Clients.EmitConfig(controller)
-	go controller.Admin.BroadcastConfig()
+	controller.Clients.EmitConfig(controller)
+	controller.Admin.BroadcastConfig()
 }
 
 func (controller *Controller) IngestCall(call *Call) {

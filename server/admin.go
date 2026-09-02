@@ -41,14 +41,23 @@ type Admin struct {
 	AttemptsMax      uint
 	AttemptsMaxDelay time.Duration
 	Broadcast        chan *[]byte
-	Conns            map[*websocket.Conn]bool
+	Conns            map[*websocket.Conn]string
 	Controller       *Controller
 	Register         chan *websocket.Conn
 	Tokens           []string
 	Unregister       chan *websocket.Conn
 	mutex            sync.Mutex
+	stateMutex       sync.RWMutex
+	writeMutex       sync.Mutex
 	running          bool
 }
+
+const (
+	adminWebSocketAuthTimeout = 5 * time.Second
+	adminWebSocketReadLimit   = 16 * 1024
+	adminTokenLifetime        = 12 * time.Hour
+	adminMaxTrackedAttempts   = 10_000
+)
 
 type AdminLoginAttempt struct {
 	Count uint
@@ -63,7 +72,7 @@ func NewAdmin(controller *Controller) *Admin {
 		AttemptsMax:      uint(3),
 		AttemptsMaxDelay: time.Duration(time.Duration.Minutes(10)),
 		Broadcast:        make(chan *[]byte),
-		Conns:            make(map[*websocket.Conn]bool),
+		Conns:            make(map[*websocket.Conn]string),
 		Controller:       controller,
 		Register:         make(chan *websocket.Conn),
 		Tokens:           []string{},
@@ -94,8 +103,10 @@ func (admin *Admin) AlertsHandler(w http.ResponseWriter, r *http.Request) {
 
 func (admin *Admin) BroadcastConfig() {
 	if b, err := json.Marshal(admin.GetConfig()); err == nil {
-		for conn := range admin.Conns {
-			conn.WriteMessage(websocket.TextMessage, b)
+		for _, conn := range admin.connections() {
+			if err := admin.writeMessage(conn, websocket.TextMessage, b); err != nil {
+				admin.removeConnection(conn)
+			}
 		}
 	}
 }
@@ -146,25 +157,35 @@ func (admin *Admin) ConfigHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		admin.Register <- conn
-
 		go func() {
-			conn.SetReadDeadline(time.Time{})
+			conn.SetReadLimit(adminWebSocketReadLimit)
+			if err := conn.SetReadDeadline(time.Now().Add(adminWebSocketAuthTimeout)); err != nil {
+				conn.Close()
+				return
+			}
+
+			messageType, b, err := conn.ReadMessage()
+			if err != nil || messageType != websocket.TextMessage || !admin.ValidateToken(string(b)) {
+				admin.writeMessage(conn, websocket.CloseMessage, websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "authentication required"))
+				conn.Close()
+				return
+			}
+
+			if err := conn.SetReadDeadline(time.Time{}); err != nil {
+				conn.Close()
+				return
+			}
+			admin.addConnection(conn, string(b))
+			defer admin.removeConnection(conn)
 
 			for {
-				_, b, err := conn.ReadMessage()
+				_, _, err := conn.ReadMessage()
 				if err != nil {
-					break
-				}
-
-				if !admin.ValidateToken(string(b)) {
 					break
 				}
 			}
 
-			admin.Unregister <- conn
-
-			conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(1000, ""))
+			admin.writeMessage(conn, websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 		}()
 
 	} else {
@@ -387,24 +408,7 @@ func (admin *Admin) LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 		remoteAddr := GetRemoteAddr(r)
 
-		attempt := admin.Attempts[remoteAddr]
-
-		if attempt == nil {
-			admin.Attempts[remoteAddr] = &AdminLoginAttempt{
-				Count: 1,
-				Date:  time.Now(),
-			}
-			attempt = admin.Attempts[remoteAddr]
-		} else {
-			attempt.Count++
-			attempt.Date = time.Now()
-		}
-
-		if attempt.Count > admin.AttemptsMax || time.Since(attempt.Date) < admin.AttemptsMaxDelay {
-			if attempt.Count == admin.AttemptsMax+1 {
-				admin.Controller.Logs.LogEvent(LogLevelWarn, fmt.Sprintf("too many login attempts for ip=\"%v\"", remoteAddr))
-			}
-
+		if admin.loginLocked(remoteAddr, time.Now()) {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
@@ -421,10 +425,15 @@ func (admin *Admin) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if !ok {
+			locked := admin.recordFailedLogin(remoteAddr, time.Now())
 			admin.Controller.Logs.LogEvent(LogLevelWarn, fmt.Sprintf("invalid login attempt for ip %v", remoteAddr))
+			if locked {
+				admin.Controller.Logs.LogEvent(LogLevelWarn, fmt.Sprintf("too many login attempts for ip=\"%v\"", remoteAddr))
+			}
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
+		admin.clearLoginAttempt(remoteAddr)
 
 		id, err := uuid.NewRandom()
 
@@ -433,7 +442,12 @@ func (admin *Admin) LoginHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{ID: id.String()})
+		now := time.Now()
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
+			ID:        id.String(),
+			IssuedAt:  jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(now.Add(adminTokenLifetime)),
+		})
 		sToken, err := token.SignedString([]byte(admin.Controller.Options.secret))
 
 		if err != nil {
@@ -441,25 +455,15 @@ func (admin *Admin) LoginHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if len(admin.Tokens) < 5 {
-			admin.Tokens = append(admin.Tokens, sToken)
-		} else {
-			admin.Tokens = append(admin.Tokens[1:], sToken)
-		}
+		admin.addToken(sToken)
 
 		b, err := json.Marshal(map[string]any{
-			"passwordNeedChange": true,
+			"passwordNeedChange": admin.Controller.Options.adminPasswordNeedChange,
 			"token":              sToken,
 		})
 		if err != nil {
 			w.WriteHeader(http.StatusExpectationFailed)
 			return
-		}
-
-		for k, v := range admin.Attempts {
-			if time.Since(v.Date) > admin.AttemptsMaxDelay {
-				delete(admin.Attempts, k)
-			}
 		}
 
 		w.Write(b)
@@ -477,11 +481,7 @@ func (admin *Admin) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-		for k, v := range admin.Tokens {
-			if v == t {
-				admin.Tokens = append(admin.Tokens[:k], admin.Tokens[k+1:]...)
-			}
-		}
+		admin.removeToken(t)
 		w.WriteHeader(http.StatusOK)
 
 	default:
@@ -568,11 +568,13 @@ func (admin *Admin) SendConfig(w http.ResponseWriter) {
 }
 
 func (admin *Admin) Start() error {
+	admin.stateMutex.Lock()
 	if admin.running {
+		admin.stateMutex.Unlock()
 		return errors.New("admin already running")
-	} else {
-		admin.running = true
 	}
+	admin.running = true
+	admin.stateMutex.Unlock()
 
 	go func() {
 		for {
@@ -582,21 +584,18 @@ func (admin *Admin) Start() error {
 					return
 				}
 
-				for conn := range admin.Conns {
-					err := conn.WriteMessage(websocket.TextMessage, *data)
+				for _, conn := range admin.connections() {
+					err := admin.writeMessage(conn, websocket.TextMessage, *data)
 					if err != nil {
-						admin.Unregister <- conn
+						admin.removeConnection(conn)
 					}
 				}
 
 			case conn := <-admin.Register:
-				admin.Conns[conn] = true
+				admin.addConnection(conn, "")
 
 			case conn := <-admin.Unregister:
-				if _, ok := admin.Conns[conn]; ok {
-					delete(admin.Conns, conn)
-					conn.Close()
-				}
+				admin.removeConnection(conn)
 			}
 		}
 	}()
@@ -691,6 +690,7 @@ func (admin *Admin) UserRemoveHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (admin *Admin) ValidateToken(sToken string) bool {
+	admin.stateMutex.RLock()
 	found := false
 	for _, t := range admin.Tokens {
 		if t == sToken {
@@ -698,12 +698,14 @@ func (admin *Admin) ValidateToken(sToken string) bool {
 			break
 		}
 	}
+	admin.stateMutex.RUnlock()
 	if !found {
 		return false
 	}
 
-	token, err := jwt.Parse(sToken, func(token *jwt.Token) (any, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+	claims := &jwt.RegisteredClaims{}
+	token, err := jwt.ParseWithClaims(sToken, claims, func(token *jwt.Token) (any, error) {
+		if token.Method != jwt.SigningMethodHS256 {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 
@@ -713,5 +715,120 @@ func (admin *Admin) ValidateToken(sToken string) bool {
 		return false
 	}
 
-	return token.Valid
+	return token.Valid && claims.ExpiresAt != nil
+}
+
+func (admin *Admin) addConnection(conn *websocket.Conn, token string) {
+	admin.stateMutex.Lock()
+	admin.Conns[conn] = token
+	admin.stateMutex.Unlock()
+}
+
+func (admin *Admin) removeConnection(conn *websocket.Conn) {
+	admin.stateMutex.Lock()
+	_, exists := admin.Conns[conn]
+	delete(admin.Conns, conn)
+	admin.stateMutex.Unlock()
+	if exists {
+		conn.Close()
+	}
+}
+
+func (admin *Admin) connections() []*websocket.Conn {
+	admin.stateMutex.RLock()
+	connections := make([]*websocket.Conn, 0, len(admin.Conns))
+	for conn := range admin.Conns {
+		connections = append(connections, conn)
+	}
+	admin.stateMutex.RUnlock()
+	return connections
+}
+
+func (admin *Admin) writeMessage(conn *websocket.Conn, messageType int, data []byte) error {
+	admin.writeMutex.Lock()
+	defer admin.writeMutex.Unlock()
+	if err := conn.SetWriteDeadline(time.Now().Add(5 * time.Second)); err != nil {
+		return err
+	}
+	return conn.WriteMessage(messageType, data)
+}
+
+func (admin *Admin) addToken(token string) {
+	admin.stateMutex.Lock()
+	defer admin.stateMutex.Unlock()
+	if len(admin.Tokens) < 5 {
+		admin.Tokens = append(admin.Tokens, token)
+		return
+	}
+	admin.Tokens = append(admin.Tokens[1:], token)
+}
+
+func (admin *Admin) removeToken(token string) {
+	admin.stateMutex.Lock()
+	for i, candidate := range admin.Tokens {
+		if candidate == token {
+			admin.Tokens = append(admin.Tokens[:i], admin.Tokens[i+1:]...)
+			break
+		}
+	}
+	connections := []*websocket.Conn{}
+	for conn, connectionToken := range admin.Conns {
+		if connectionToken == token {
+			delete(admin.Conns, conn)
+			connections = append(connections, conn)
+		}
+	}
+	admin.stateMutex.Unlock()
+
+	for _, conn := range connections {
+		conn.Close()
+	}
+}
+
+func (admin *Admin) loginLocked(remoteAddr string, now time.Time) bool {
+	admin.stateMutex.Lock()
+	defer admin.stateMutex.Unlock()
+	attempt, ok := admin.Attempts[remoteAddr]
+	if !ok {
+		return false
+	}
+	if now.Sub(attempt.Date) >= admin.AttemptsMaxDelay {
+		delete(admin.Attempts, remoteAddr)
+		return false
+	}
+	return admin.AttemptsMax > 0 && attempt.Count >= admin.AttemptsMax
+}
+
+func (admin *Admin) recordFailedLogin(remoteAddr string, now time.Time) bool {
+	admin.stateMutex.Lock()
+	defer admin.stateMutex.Unlock()
+	var oldestAddr string
+	var oldestTime time.Time
+	for addr, candidate := range admin.Attempts {
+		if now.Sub(candidate.Date) >= admin.AttemptsMaxDelay {
+			delete(admin.Attempts, addr)
+			continue
+		}
+		if oldestAddr == "" || candidate.Date.Before(oldestTime) {
+			oldestAddr = addr
+			oldestTime = candidate.Date
+		}
+	}
+	if _, exists := admin.Attempts[remoteAddr]; !exists && len(admin.Attempts) >= adminMaxTrackedAttempts {
+		delete(admin.Attempts, oldestAddr)
+	}
+	attempt, ok := admin.Attempts[remoteAddr]
+	if !ok || now.Sub(attempt.Date) >= admin.AttemptsMaxDelay {
+		attempt = &AdminLoginAttempt{}
+		admin.Attempts[remoteAddr] = attempt
+	}
+	attempt.Count++
+	attempt.Date = now
+	return admin.AttemptsMax > 0 && attempt.Count >= admin.AttemptsMax
+}
+
+func (admin *Admin) clearLoginAttempt(remoteAddr string) {
+	admin.stateMutex.Lock()
+	delete(admin.Attempts, remoteAddr)
+	admin.stateMutex.Unlock()
 }
