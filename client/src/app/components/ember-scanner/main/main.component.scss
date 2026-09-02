@@ -106,7 +106,7 @@
     display: grid;
     font-size: 9px;
     font-weight: 500;
-    grid-template-columns: 58px minmax(0, 1fr) 44px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     height: 18px;
     letter-spacing: 0.08em;
     margin: 3px 0 2px;
