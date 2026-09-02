@@ -637,14 +637,30 @@ export class EmberScannerAdminService implements OnDestroy {
     }
 
     newUnitForm(unit?: Unit): FormGroup {
-        return this.ngFormBuilder.group({
+        const form = this.ngFormBuilder.group({
             id: this.ngFormBuilder.control(unit?.id),
             label: this.ngFormBuilder.control(unit?.label, Validators.required),
             order: this.ngFormBuilder.control(unit?.order),
             unitRef: this.ngFormBuilder.control(unit?.unitRef, [Validators.min(1), this.validateUnitRef()]),
             unitFrom: this.ngFormBuilder.control(unit?.unitFrom, [Validators.min(1), this.validateUnitFrom()]),
-            unitTo: this.ngFormBuilder.control(unit?.unitTo, [Validators.min(1), this.validateUnitTo()])
+            unitTo: this.ngFormBuilder.control(unit?.unitTo, Validators.min(1))
         });
+
+        const unitRef = form.get('unitRef');
+        const unitFrom = form.get('unitFrom');
+        const unitTo = form.get('unitTo');
+
+        // The range error lives on unitFrom. Revalidate it when unitTo changes,
+        // without emitting another value change or scheduling a timer.
+        unitFrom?.valueChanges.subscribe(() => {
+            unitRef?.updateValueAndValidity({ emitEvent: false });
+        });
+        unitTo?.valueChanges.subscribe(() => {
+            unitRef?.updateValueAndValidity({ emitEvent: false });
+            unitFrom?.updateValueAndValidity({ emitEvent: false });
+        });
+
+        return form;
     }
 
     private configWebSocketClose(): void {
@@ -932,39 +948,17 @@ export class EmberScannerAdminService implements OnDestroy {
 
     private validateUnitFrom(): ValidatorFn {
         return (control: AbstractControl): ValidationErrors | null => {
-            const unitFrom = control.value;
+            const unitFromValue = control.value;
 
-            const unitTo = control.parent?.get('unitTo')?.value;
+            const unitToValue = control.parent?.get('unitTo')?.value;
+            const unitFrom = Number(unitFromValue);
+            const unitTo = Number(unitToValue);
 
-            if (typeof unitFrom === 'number' && typeof unitTo === 'number' && unitFrom >= unitTo) {
-                return { range: true };
-            }
-
-            setTimeout(() => {
-                control.parent?.get('unitRef')?.updateValueAndValidity();
-                control.parent?.get('unitTo')?.updateValueAndValidity();
-            });
-
-            return null;
-        }
-    }
-
-    private validateUnitTo(): ValidatorFn {
-        return (control: AbstractControl): ValidationErrors | null => {
-            const unitFrom = control.parent?.get('unitFrom')?.value;
-
-            const unitTo = control.value;
-
-            if (typeof unitFrom === 'number' && typeof unitTo === 'number' && unitFrom >= unitTo) {
-                return { range: true };
-            }
-
-            setTimeout(() => {
-                control.parent?.get('unitRef')?.updateValueAndValidity();
-                control.parent?.get('unitFrom')?.updateValueAndValidity();
-            });
-
-            return null;
+            return unitFromValue !== null && unitFromValue !== ''
+                && unitToValue !== null && unitToValue !== ''
+                && Number.isFinite(unitFrom) && Number.isFinite(unitTo) && unitFrom >= unitTo
+                ? { range: true }
+                : null;
         }
     }
 

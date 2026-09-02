@@ -284,6 +284,8 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
 
     ngOnDestroy(): void {
         this.clockTimer?.unsubscribe();
+        this.dimmerTimer?.unsubscribe();
+        this.replayTimer?.unsubscribe();
 
         this.eventSubscription.unsubscribe();
     }
@@ -495,6 +497,8 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
                 this.call = incomingCall;
                 this.upsertHistoryCall(incomingCall);
 
+                this.updateDimmer(true);
+            } else {
                 this.updateDimmer();
             }
         }
@@ -621,8 +625,6 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
 
         if ('time' in event && typeof event.time === 'number') {
             this.callTime = event.time;
-
-            this.updateDimmer();
         }
 
         if ('tooMany' in event && event.tooMany === true) {
@@ -737,11 +739,16 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
         this.clockTimer = timer(1000 * (60 - this.clock.getSeconds())).subscribe(() => this.syncClock());
     }
 
-    private updateDimmer(): void {
+    private updateDimmer(keepAwake = false): void {
         if (typeof this.config?.dimmerDelay === 'number') {
             this.dimmerTimer?.unsubscribe();
+            this.dimmerTimer = undefined;
 
             this.dimmer = true;
+
+            if (keepAwake) {
+                return;
+            }
 
             this.dimmerTimer = timer(this.config.dimmerDelay).subscribe(() => {
                 this.dimmerTimer?.unsubscribe();

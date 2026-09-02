@@ -546,7 +546,7 @@ export class EmberScannerService implements OnDestroy {
 
             this.event.emit({ call: this.call, queue });
 
-            interval(500).pipe(takeWhile(() => !!this.call)).subscribe(() => {
+            interval(1000).pipe(takeWhile(() => !!this.call)).subscribe(() => {
                 if (this.audioContext && !isNaN(this.audioContext.currentTime)) {
                     if (isNaN(this.audioSourceStartTime)) {
                         this.audioSourceStartTime = this.audioContext.currentTime;

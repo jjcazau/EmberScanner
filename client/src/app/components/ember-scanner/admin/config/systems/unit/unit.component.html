@@ -31,7 +31,6 @@
       </p>
       <mat-form-field floatLabel="auto">
         <input type="number" min="1" step="1" matInput formControlName="unitTo" placeholder="To">
-        <mat-error *ngIf="f.get('unitTo')!.hasError('range')">To value should be higher than From value</mat-error>
         <mat-error *ngIf="f.get('unitTo')!.hasError('min')">To value is invalid</mat-error>
       </mat-form-field>
     </div>
