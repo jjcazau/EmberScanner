@@ -153,6 +153,14 @@ export class EmberScannerService implements OnDestroy {
         this.sendtoWebsocket(WebsocketCommand.Pin, window.btoa(password));
     }
 
+    getSelectionState(): EmberScannerEvent {
+        return {
+            categories: this.categories,
+            config: this.config,
+            map: this.livefeedMap,
+        };
+    }
+
     avoid(options: EmberScannerAvoidOptions = {}): void {
         const clearTimer = (lfm: EmberScannerLivefeed): void => {
             lfm.minutes = undefined;

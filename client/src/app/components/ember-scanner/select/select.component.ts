@@ -57,6 +57,7 @@ export class EmberScannerSelectComponent implements OnDestroy {
 
     constructor(private emberScannerService: EmberScannerService) {
         this.eventSubscription = this.emberScannerService.event.subscribe((event: EmberScannerEvent) => this.eventHandler(event));
+        this.eventHandler(this.emberScannerService.getSelectionState());
     }
 
     avoid(options?: EmberScannerAvoidOptions): void {
