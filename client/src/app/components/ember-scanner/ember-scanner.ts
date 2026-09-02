@@ -102,6 +102,7 @@ export interface EmberScannerConfig {
     groupsData: EmberScannerGroupData[];
     keypadBeeps: EmberScannerKeypadBeeps | undefined;
     playbackGoesLive: boolean;
+    showErrorsAndSpikes: boolean;
     showListenersCount: boolean;
     systems: EmberScannerSystem[];
     tags: { [key: string]: { [key: number]: number[] } };

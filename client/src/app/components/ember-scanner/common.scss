@@ -1,3 +1,50 @@
+.branding {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+  padding: 2px 1px 3px;
+  text-transform: uppercase;
+
+  .branding-label,
+  .branding-product {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .branding-label {
+    // Keep the recessed, moulded-plastic character of the radio fascia while
+    // giving the configured label enough luminance to remain readable at a glance.
+    color: rgb(163, 168, 171);
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    line-height: 1.2;
+    text-shadow:
+      -1px -1px 0 rgb(0, 0, 0),
+      1px 1px 0 rgba(255, 255, 255, 0.32);
+  }
+
+  .branding-product {
+    color: rgba(163, 168, 171, 0.58);
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.22em;
+    line-height: 1;
+    text-shadow: -1px -1px 0 rgba(0, 0, 0, 0.55);
+  }
+}
+
+@media (max-width: 400px) {
+  .branding .branding-label {
+    font-size: 14px;
+    letter-spacing: 0.13em;
+  }
+}
+
 .ember-button,
 .ember-button-mini {
   --def: rgb(45, 45, 45);

@@ -1,5 +1,10 @@
 <section class="pin-panel" aria-labelledby="pin-heading">
-  <div class="pin-branding">{{ branding || 'EMBER SCANNER' }}</div>
+  <div class="branding">
+    @if (branding) {
+      <span class="branding-label">{{ branding }}</span>
+    }
+    <span class="branding-product">EMBER SCANNER</span>
+  </div>
 
   <div class="pin-display" [class.error]="error || localError" [class.pending]="busy"
     role="status" aria-live="polite">

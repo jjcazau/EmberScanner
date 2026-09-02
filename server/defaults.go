@@ -66,6 +66,7 @@ type DefaultOptions struct {
 	maxPinAttempts              uint
 	playbackGoesLive            bool
 	pruneDays                   uint
+	showErrorsAndSpikes         bool
 	showListenersCount          bool
 	sortTalkgroups              bool
 	time12hFormat               bool
@@ -111,6 +112,7 @@ var defaults Defaults = Defaults{
 		maxPinAttempts:              5,
 		playbackGoesLive:            false,
 		pruneDays:                   7,
+		showErrorsAndSpikes:         true,
 		showListenersCount:          false,
 		sortTalkgroups:              false,
 		time12hFormat:               false,

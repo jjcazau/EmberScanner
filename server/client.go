@@ -199,19 +199,20 @@ func (client *Client) SendConfig(groups *Groups, options *Options, systems *Syst
 	client.TagsMap = tags.GetTagsMap(&client.SystemsMap)
 
 	var payload = map[string]any{
-		"alerts":             Alerts,
-		"branding":           options.Branding,
-		"dimmerDelay":        options.DimmerDelay,
-		"email":              options.Email,
-		"groups":             client.GroupsMap,
-		"groupsData":         client.GroupsData,
-		"keypadBeeps":        GetKeypadBeeps(options),
-		"playbackGoesLive":   options.PlaybackGoesLive,
-		"showListenersCount": options.ShowListenersCount,
-		"systems":            client.SystemsMap,
-		"tags":               client.TagsMap,
-		"tagsData":           client.TagsData,
-		"time12hFormat":      options.Time12hFormat,
+		"alerts":              Alerts,
+		"branding":            options.Branding,
+		"dimmerDelay":         options.DimmerDelay,
+		"email":               options.Email,
+		"groups":              client.GroupsMap,
+		"groupsData":          client.GroupsData,
+		"keypadBeeps":         GetKeypadBeeps(options),
+		"playbackGoesLive":    options.PlaybackGoesLive,
+		"showErrorsAndSpikes": options.ShowErrorsAndSpikes,
+		"showListenersCount":  options.ShowListenersCount,
+		"systems":             client.SystemsMap,
+		"tags":                client.TagsMap,
+		"tagsData":            client.TagsData,
+		"time12hFormat":       options.Time12hFormat,
 	}
 
 	client.Send <- &Message{Command: MessageCommandConfig, Payload: payload}

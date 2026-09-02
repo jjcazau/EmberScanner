@@ -156,6 +156,7 @@ export interface Options {
     maxPinAttempts?: number;
     playbackGoesLive?: boolean;
     pruneDays?: number;
+    showErrorsAndSpikes?: boolean;
     showListenersCount?: boolean;
     sortTalkgroups?: boolean;
     time12hFormat?: boolean;
@@ -576,6 +577,7 @@ export class EmberScannerAdminService implements OnDestroy {
             maxPinAttempts: this.ngFormBuilder.control(options?.maxPinAttempts, [Validators.required, Validators.min(1)]),
             playbackGoesLive: this.ngFormBuilder.control(options?.playbackGoesLive),
             pruneDays: this.ngFormBuilder.control(options?.pruneDays, [Validators.required, Validators.min(0)]),
+            showErrorsAndSpikes: this.ngFormBuilder.control(options?.showErrorsAndSpikes ?? true),
             showListenersCount: this.ngFormBuilder.control(options?.showListenersCount),
             sortTalkgroups: this.ngFormBuilder.control(options?.sortTalkgroups),
             time12hFormat: this.ngFormBuilder.control(options?.time12hFormat),

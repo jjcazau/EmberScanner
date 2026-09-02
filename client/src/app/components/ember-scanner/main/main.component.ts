@@ -136,6 +136,10 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
 
     volumeLevel = 100;
 
+    get showErrorsAndSpikes(): boolean {
+        return this.config?.showErrorsAndSpikes ?? true;
+    }
+
     get showListenersCount(): boolean {
         return this.config?.showListenersCount || false;
     }

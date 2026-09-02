@@ -3,7 +3,12 @@
     (pinChange)="clearPinError()" (pinSubmit)="authenticate($event)"></ember-scanner-pin>
 } @else {
 <div class="ember-status">
-  <div class="branding">{{ branding }}</div>
+  <div class="branding">
+    @if (branding) {
+      <span class="branding-label">{{ branding }}</span>
+    }
+    <span class="branding-product">EMBER SCANNER</span>
+  </div>
   <div class="led" [ngClass]="ledStyle"></div>
 </div>
 <div class="ember-display" [ngClass]="{ idle: !dimmer }" (dblclick)="toggleFullscreen.emit()">
@@ -79,7 +84,9 @@
   </div>
   <div class="row">
     <div>
-      <span>Errors: {{ callError || 0 }} Spike: {{ callSpike || 0 }} </span>
+      @if (showErrorsAndSpikes) {
+        <span>Errors: {{ callError || 0 }} Spike: {{ callSpike || 0 }} </span>
+      }
     </div>
     <div></div>
     <div>

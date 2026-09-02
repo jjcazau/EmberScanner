@@ -44,6 +44,7 @@ type Options struct {
 	MaxPinAttempts              uint   `json:"maxPinAttempts"`
 	PlaybackGoesLive            bool   `json:"playbackGoesLive"`
 	PruneDays                   uint   `json:"pruneDays"`
+	ShowErrorsAndSpikes         bool   `json:"showErrorsAndSpikes"`
 	ShowListenersCount          bool   `json:"showListenersCount"`
 	SortTalkgroups              bool   `json:"sortTalkgroups"`
 	Time12hFormat               bool   `json:"time12hFormat"`
@@ -157,6 +158,13 @@ func (options *Options) FromMap(m map[string]any) *Options {
 		options.PruneDays = defaults.options.pruneDays
 	}
 
+	switch v := m["showErrorsAndSpikes"].(type) {
+	case bool:
+		options.ShowErrorsAndSpikes = v
+	default:
+		options.ShowErrorsAndSpikes = defaults.options.showErrorsAndSpikes
+	}
+
 	switch v := m["showListenersCount"].(type) {
 	case bool:
 		options.ShowListenersCount = v
@@ -210,6 +218,7 @@ func (options *Options) Read(db *Database) error {
 	options.MaxPinAttempts = defaults.options.maxPinAttempts
 	options.PlaybackGoesLive = defaults.options.playbackGoesLive
 	options.PruneDays = defaults.options.pruneDays
+	options.ShowErrorsAndSpikes = defaults.options.showErrorsAndSpikes
 	options.ShowListenersCount = defaults.options.showListenersCount
 	options.SortTalkgroups = defaults.options.sortTalkgroups
 
@@ -352,6 +361,13 @@ func (options *Options) Read(db *Database) error {
 					options.secret = newSecret(n)
 				}
 			}
+		case "showErrorsAndSpikes":
+			if err = json.Unmarshal([]byte(value.String), &f); err == nil {
+				switch v := f.(type) {
+				case bool:
+					options.ShowErrorsAndSpikes = v
+				}
+			}
 		case "showListenersCount":
 			if err = json.Unmarshal([]byte(value.String), &f); err == nil {
 				switch v := f.(type) {
@@ -427,6 +443,7 @@ func (options *Options) Write(db *Database) error {
 	set("playbackGoesLive", options.PlaybackGoesLive)
 	set("pruneDays", options.PruneDays)
 	set("secret", options.secret)
+	set("showErrorsAndSpikes", options.ShowErrorsAndSpikes)
 	set("showListenersCount", options.ShowListenersCount)
 	set("sortTalkgroups", options.SortTalkgroups)
 	set("time12hFormat", options.Time12hFormat)
