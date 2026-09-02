@@ -23,7 +23,25 @@
       <span>Calls Waiting: {{ callQueue }}</span>
     </div>
   </div>
-  <div class="row small"></div>
+  <div class="signal-strip" [class.active]="call" [class.offline]="!linked"
+    [attr.aria-label]="signalAriaLabel">
+    <span class="signal-state">{{ signalState }}</span>
+    <div class="signal-bars" aria-hidden="true">
+      <span style="--level: 10px; --delay: -110ms"></span>
+      <span style="--level: 7px; --delay: -220ms"></span>
+      <span style="--level: 4px; --delay: -330ms"></span>
+      <span style="--level: 11px; --delay: -440ms"></span>
+      <span style="--level: 8px; --delay: 0ms"></span>
+      <span style="--level: 5px; --delay: -110ms"></span>
+      <span style="--level: 12px; --delay: -220ms"></span>
+      <span style="--level: 9px; --delay: -330ms"></span>
+      <span style="--level: 6px; --delay: -440ms"></span>
+      <span style="--level: 3px; --delay: 0ms"></span>
+      <span style="--level: 10px; --delay: -110ms"></span>
+      <span style="--level: 7px; --delay: -220ms"></span>
+    </div>
+    <span class="signal-mode">{{ signalMode }}</span>
+  </div>
   <div class="row">
     <div>
       <span>{{ callSystem }}</span>

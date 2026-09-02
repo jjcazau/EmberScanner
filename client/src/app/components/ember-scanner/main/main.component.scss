@@ -42,18 +42,45 @@
 }
 
 .ember-display {
-  background: rgb(209, 238, 238);
-  box-shadow: 2px 2px 4px rgb(0, 0, 0) inset, 1px 1px 2px 1px rgb(255, 255, 255);
+  --lcd-background: rgb(209, 238, 238);
+  --lcd-ink: rgba(0, 0, 0, 0.8);
+
+  background:
+    radial-gradient(circle at 50% -20%, rgba(255, 255, 255, 0.55), transparent 48%),
+    var(--lcd-background);
+  border: 1px solid rgba(0, 0, 0, 0.75);
+  border-radius: 7px 7px 4px 4px;
+  box-shadow:
+    3px 3px 7px rgba(0, 0, 0, 0.8) inset,
+    -1px -1px 3px rgba(255, 255, 255, 0.55) inset,
+    0 1px 0 rgba(255, 255, 255, 0.45);
   color: rgba(0, 0, 0, 0.8);
   cursor: default;
   display: block;
   font-size: 14px;
   font-weight: 400;
+  isolation: isolate;
   line-height: 20px;
+  overflow: hidden;
   padding: 8px;
+  position: relative;
+
+  &::after {
+    background: repeating-linear-gradient(
+      0deg,
+      transparent 0,
+      transparent 2px,
+      rgba(17, 47, 47, 0.035) 3px
+    );
+    content: "";
+    inset: 0;
+    pointer-events: none;
+    position: absolute;
+    z-index: 2;
+  }
 
   &.idle {
-    background: rgb(190, 190, 174);
+    --lcd-background: rgb(190, 190, 174);
 
     .avoid,
     .patched {
@@ -65,6 +92,60 @@
     overflow: hidden;
     text-overflow: clip;
     white-space: nowrap;
+  }
+
+  > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .signal-strip {
+    align-items: center;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.24);
+    border-top: 1px solid rgba(0, 0, 0, 0.24);
+    display: grid;
+    font-size: 9px;
+    font-weight: 500;
+    grid-template-columns: 58px minmax(0, 1fr) 44px;
+    height: 18px;
+    letter-spacing: 0.08em;
+    margin: 3px 0 2px;
+
+    &.offline {
+      opacity: 0.45;
+    }
+
+    .signal-state,
+    .signal-mode {
+      line-height: 18px;
+    }
+
+    .signal-mode {
+      text-align: right;
+    }
+
+    .signal-bars {
+      align-items: center;
+      display: flex;
+      gap: 2px;
+      height: 14px;
+      justify-content: center;
+      padding: 0 6px;
+
+      span {
+        background: var(--lcd-ink);
+        height: var(--level, 3px);
+        opacity: 0.18;
+        transform-origin: center;
+        width: clamp(2px, 0.8vw, 4px);
+      }
+    }
+
+    &.active .signal-bars span {
+      animation: signal-pulse 840ms ease-in-out infinite alternate;
+      animation-delay: var(--delay);
+      opacity: 0.78;
+    }
   }
 
   .flag {
@@ -207,6 +288,25 @@
     tbody > tr {
       border-top: 1px solid rgba(0, 0, 0, 0.2);
     }
+  }
+}
+
+@keyframes signal-pulse {
+  0% {
+    opacity: 0.26;
+    transform: scaleY(0.35);
+  }
+
+  100% {
+    opacity: 0.88;
+    transform: scaleY(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ember-display .signal-strip.active .signal-bars span,
+  .ember-status .led.paused {
+    animation: none;
   }
 }
 

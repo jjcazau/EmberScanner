@@ -140,6 +140,26 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
         return this.config?.showListenersCount || false;
     }
 
+    get signalAriaLabel(): string {
+        if (this.isSavedPlayback) return 'Playing a saved call';
+        if (this.call) return 'Receiving a live call';
+        if (this.callQueue > 0) return `${this.callQueue} live calls waiting`;
+        return this.linked ? 'Scanning for live calls' : 'Scanner link offline';
+    }
+
+    get signalMode(): string {
+        if (this.isSavedPlayback) return 'ARCHIVE';
+        if (this.call || this.callQueue > 0) return 'LIVE';
+        return this.linked ? 'READY' : 'NO LINK';
+    }
+
+    get signalState(): string {
+        if (this.isSavedPlayback) return 'PLAYBACK';
+        if (this.call) return 'RECEIVING';
+        if (this.callQueue > 0) return 'QUEUED';
+        return this.linked ? 'SCANNING' : 'OFFLINE';
+    }
+
     @Output() openSearchPanel = new EventEmitter<void>();
 
     @Output() toggleFullscreen = new EventEmitter<void>();
@@ -159,6 +179,11 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
     private historyReplacePending = false;
 
     private historyRequest = 0;
+
+    private get isSavedPlayback(): boolean {
+        return this.playbackMode
+            || (this.selectedHistoryCallId !== undefined && this.call?.id === this.selectedHistoryCallId);
+    }
 
     private pendingHistoryIndex: number | undefined;
 
