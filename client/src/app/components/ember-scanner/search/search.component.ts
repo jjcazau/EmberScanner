@@ -83,6 +83,10 @@ export class EmberScannerSearchComponent implements AfterViewInit, OnDestroy {
 
     private offset = 0;
 
+    private selectableSystems: EmberScannerSystem[] = [];
+
+    private selectableTalkgroups: EmberScannerTalkgroup[] = [];
+
     @ViewChild('loadMoreTrigger', { read: ElementRef }) private loadMoreTrigger: ElementRef<HTMLElement> | undefined;
 
     constructor(
@@ -214,17 +218,17 @@ export class EmberScannerSearchComponent implements AfterViewInit, OnDestroy {
         const selectedTag = this.getSelectedTag();
         const selectedTalkgroup = this.getSelectedTalkgroup();
 
-        this.optionsSystem = this.config.systems
+        this.selectableSystems = this.config.systems
             .filter((system) => {
                 const group = selectedGroup === undefined ||
                     system.talkgroups.some((talkgroup) => talkgroup.groups.includes(selectedGroup));
                 const tag = selectedTag === undefined ||
                     system.talkgroups.some((talkgroup) => talkgroup.tag === selectedTag);
                 return group && tag;
-            })
-            .map((system) => system.label);
+            });
+        this.optionsSystem = this.selectableSystems.map((system) => system.label);
 
-        this.optionsTalkgroup = selectedSystem == undefined
+        this.selectableTalkgroups = selectedSystem == undefined
             ? []
             : selectedSystem.talkgroups
                 .filter((talkgroup) => {
@@ -233,8 +237,8 @@ export class EmberScannerSearchComponent implements AfterViewInit, OnDestroy {
                     const tag = selectedTag == undefined ||
                         talkgroup.tag === selectedTag;
                     return group && tag;
-                })
-                .map((talkgroup) => talkgroup.label);
+                });
+        this.optionsTalkgroup = this.selectableTalkgroups.map((talkgroup) => talkgroup.label);
 
         this.optionsGroup = Object.keys(this.config.groups)
             .filter((group) => {
@@ -268,9 +272,9 @@ export class EmberScannerSearchComponent implements AfterViewInit, OnDestroy {
 
         this.form.patchValue({
             group: selectedGroup ? this.optionsGroup.findIndex((group) => group === selectedGroup) : -1,
-            system: selectedSystem ? this.optionsSystem.findIndex((system) => system === selectedSystem.label) : -1,
+            system: selectedSystem ? this.selectableSystems.findIndex((system) => system.id === selectedSystem.id) : -1,
             tag: selectedTag ? this.optionsTag.findIndex((tag) => tag === selectedTag) : -1,
-            talkgroup: selectedTalkgroup ? this.optionsTalkgroup.findIndex((talkgroup) => talkgroup === selectedTalkgroup.label) : -1,
+            talkgroup: selectedTalkgroup ? this.selectableTalkgroups.findIndex((talkgroup) => talkgroup.id === selectedTalkgroup.id) : -1,
         });
     }
 
@@ -383,7 +387,10 @@ export class EmberScannerSearchComponent implements AfterViewInit, OnDestroy {
             this.callPending = undefined;
 
             this.optionsGroup = Object.keys(this.config?.groups || []).sort((a, b) => a.localeCompare(b));
-            this.optionsSystem = (this.config?.systems || []).map((system) => system.label);
+            this.selectableSystems = this.config?.systems || [];
+            this.optionsSystem = this.selectableSystems.map((system) => system.label);
+            this.selectableTalkgroups = [];
+            this.optionsTalkgroup = [];
             this.optionsTag = Object.keys(this.config?.tags || []).sort((a, b) => a.localeCompare(b));
 
             this.time12h = this.config?.time12hFormat || false;
@@ -447,7 +454,7 @@ export class EmberScannerSearchComponent implements AfterViewInit, OnDestroy {
     }
 
     private getSelectedSystem(): EmberScannerSystem | undefined {
-        return this.config?.systems.find((system) => system.label === this.optionsSystem[this.form.get('system')?.value ?? -1]);
+        return this.selectableSystems[this.form.get('system')?.value ?? -1];
     }
 
     private getSelectedTag(): string | undefined {
@@ -455,10 +462,8 @@ export class EmberScannerSearchComponent implements AfterViewInit, OnDestroy {
     }
 
     private getSelectedTalkgroup(): EmberScannerTalkgroup | undefined {
-        const system = this.getSelectedSystem();
-
-        return system
-            ? system.talkgroups.find((talkgroup) => talkgroup.label === this.optionsTalkgroup[this.form.get('talkgroup')?.value ?? -1])
+        return this.getSelectedSystem()
+            ? this.selectableTalkgroups[this.form.get('talkgroup')?.value ?? -1]
             : undefined;
     }
 

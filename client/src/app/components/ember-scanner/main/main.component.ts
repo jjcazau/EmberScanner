@@ -144,20 +144,23 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
         if (this.isSavedPlayback) return 'Playing a saved call';
         if (this.call) return 'Receiving a live call';
         if (this.callQueue > 0) return `${this.callQueue} live calls waiting`;
-        return this.linked ? 'Scanning for live calls' : 'Scanner link offline';
+        if (!this.linked) return 'Scanner link offline';
+        return this.livefeedOffline ? 'Live feed is off' : 'Scanning for live calls';
     }
 
     get signalMode(): string {
         if (this.isSavedPlayback) return 'ARCHIVE';
         if (this.call || this.callQueue > 0) return 'LIVE';
-        return this.linked ? 'READY' : 'NO LINK';
+        if (!this.linked) return 'NO LINK';
+        return this.livefeedOffline ? 'OFF' : 'READY';
     }
 
     get signalState(): string {
         if (this.isSavedPlayback) return 'PLAYBACK';
         if (this.call) return 'RECEIVING';
         if (this.callQueue > 0) return 'QUEUED';
-        return this.linked ? 'SCANNING' : 'OFFLINE';
+        if (!this.linked) return 'OFFLINE';
+        return this.livefeedOffline ? 'STANDBY' : 'SCANNING';
     }
 
     @Output() openSearchPanel = new EventEmitter<void>();
@@ -732,22 +735,10 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
     private getLedColor(call: EmberScannerCall | undefined): string {
         const colors = ['blue', 'cyan', 'green', 'magenta', 'orange', 'red', 'white', 'yellow'];
 
-        let color;
-
-        if (Array.isArray(call?.groupsData)) {
-            const group = call?.groupsData.find((g) => g.led);
-
-            if (group?.led) color = group.led;
-
-        } else if (call?.tagData?.led) {
-            color = call.tagData?.led
-
-        } else if (call?.systemData?.led) {
-            color = call?.systemData.led;
-
-        } else if (call?.talkgroupData?.led) {
-            color = call.talkgroupData.led;
-        }
+        const color = call?.groupsData?.find((group) => group.led)?.led
+            || call?.tagData?.led
+            || call?.systemData?.led
+            || call?.talkgroupData?.led;
 
         return color && colors.includes(color) ? color : 'green';
     }

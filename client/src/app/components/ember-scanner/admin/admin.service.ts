@@ -478,7 +478,7 @@ export class EmberScannerAdminService implements OnDestroy {
         } catch (error) {
             this.errorHandler(error);
 
-            return config;
+            throw error;
         }
     }
 
@@ -840,13 +840,17 @@ export class EmberScannerAdminService implements OnDestroy {
 
     private validateGroup(): ValidatorFn {
         return (control: AbstractControl): ValidationErrors | null => {
-            if (typeof control.value !== 'number') {
+            if (!Array.isArray(control.value)) {
                 return null;
             }
 
-            const groupIds = control.root.get('groups')?.value.map((group: Group) => group.id);
+            const validGroupIds = control.root.get('groups')?.value.map((group: Group) => group.id);
 
-            return groupIds ? groupIds.includes(control.value) ? null : { required: true } : null;
+            if (!validGroupIds) {
+                return null;
+            }
+
+            return control.value.every((groupId) => validGroupIds.includes(groupId)) ? null : { required: true };
         };
     }
 

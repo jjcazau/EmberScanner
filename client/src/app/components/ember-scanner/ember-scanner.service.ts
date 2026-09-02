@@ -78,6 +78,7 @@ export class EmberScannerService implements OnDestroy {
 
     private audioSource: AudioBufferSourceNode | undefined;
     private audioSourceStartTime = NaN;
+    private audioDecodeGeneration = 0;
 
     private volumeLevel = 1;
 
@@ -159,27 +160,35 @@ export class EmberScannerService implements OnDestroy {
         };
 
         const setTimer = (lfm: EmberScannerLivefeed, minutes: number): void => {
+            const timerMap = this.livefeedMap;
+
             lfm.minutes = minutes;
             lfm.timer = timer(minutes * 60 * 1000).subscribe(() => {
                 lfm.active = true;
                 lfm.minutes = undefined;
                 lfm.timer = undefined;
 
-                this.rebuildCategories();
-                this.saveLivefeedMap();
+                this.saveLivefeedMap(timerMap);
 
-                this.event.emit({
-                    categories: this.categories,
-                    map: this.livefeedMap,
-                });
+                if (timerMap === this.livefeedMap) {
+                    this.rebuildCategories();
+                    this.syncLivefeedMap();
+
+                    this.event.emit({
+                        categories: this.categories,
+                        map: this.livefeedMap,
+                    });
+                }
             });
         };
 
         if (this.livefeedMapPriorToHoldSystem) {
+            this.cancelLivefeedTimers(this.livefeedMapPriorToHoldSystem);
             this.livefeedMapPriorToHoldSystem = undefined;
         }
 
         if (this.livefeedMapPriorToHoldTalkgroup) {
+            this.cancelLivefeedTimers(this.livefeedMapPriorToHoldTalkgroup);
             this.livefeedMapPriorToHoldTalkgroup = undefined;
         }
 
@@ -283,13 +292,12 @@ export class EmberScannerService implements OnDestroy {
                 this.livefeedMapPriorToHoldSystem = this.livefeedMap;
 
                 this.livefeedMap = Object.keys(this.livefeedMap).map((sys) => +sys).reduce((sysMap, sys) => {
-                    const allOn = Object.keys(this.livefeedMap[sys]).map((tg) => +tg).every((tg) => !this.livefeedMap[sys][tg]);
+                    const allOff = Object.keys(this.livefeedMap[sys]).map((tg) => +tg)
+                        .every((tg) => !this.livefeedMap[sys][tg].active);
 
                     sysMap[sys] = Object.keys(this.livefeedMap[sys]).map((tg) => +tg).reduce((tgMap, tg) => {
-                        this.livefeedMap[sys][tg].timer?.unsubscribe();
-
                         tgMap[tg] = {
-                            active: sys === call.system ? allOn || this.livefeedMap[sys][tg].active : false,
+                            active: sys === call.system ? allOff || this.livefeedMap[sys][tg].active : false,
                         } as EmberScannerLivefeed;
 
                         return tgMap;
@@ -335,8 +343,6 @@ export class EmberScannerService implements OnDestroy {
 
                 this.livefeedMap = Object.keys(this.livefeedMap).map((sys) => +sys).reduce((sysMap, sys) => {
                     sysMap[sys] = Object.keys(this.livefeedMap[sys]).map((tg) => +tg).reduce((tgMap, tg) => {
-                        this.livefeedMap[sys][tg].timer?.unsubscribe();
-
                         tgMap[tg] = {
                             active: sys === call.system ? tg === call.talkgroup : false,
                         } as EmberScannerLivefeed;
@@ -524,41 +530,57 @@ export class EmberScannerService implements OnDestroy {
             ? this.getPlaybackQueueCount()
             : this.callQueue.length;
 
-        const arrayBuffer = new ArrayBuffer(this.call.audio.data.length);
+        const callToPlay = this.call;
+        const audio = callToPlay.audio;
+
+        if (!audio) {
+            return;
+        }
+
+        const decodeGeneration = ++this.audioDecodeGeneration;
+        const arrayBuffer = new ArrayBuffer(audio.data.length);
         const arrayBufferView = new Uint8Array(arrayBuffer);
 
-        for (let i = 0; i < (this.call.audio.data.length); i++) {
-            arrayBufferView[i] = this.call.audio.data[i];
+        for (let i = 0; i < audio.data.length; i++) {
+            arrayBufferView[i] = audio.data[i];
         }
 
         this.audioContext?.decodeAudioData(arrayBuffer, async (buffer) => {
-            if (!this.audioContext || this.audioSource || !this.call) {
+            if (!this.audioContext || this.audioSource || this.call !== callToPlay
+                || decodeGeneration !== this.audioDecodeGeneration) {
                 return;
             }
 
-            await this.playAlert(this.call);
+            await this.playAlert(callToPlay);
+
+            if (!this.audioContext || this.audioSource || this.call !== callToPlay
+                || decodeGeneration !== this.audioDecodeGeneration) {
+                return;
+            }
 
             this.audioSource = this.audioContext.createBufferSource();
             this.audioSource.buffer = buffer;
             this.audioSource.connect(this.audioGain || this.audioContext.destination);
             this.audioSource.onended = () => this.skip({ delay: true });
             this.audioSource.start();
+            this.audioSourceStartTime = this.audioContext.currentTime;
 
-            this.event.emit({ call: this.call, queue });
+            this.event.emit({ call: callToPlay, queue });
 
-            interval(1000).pipe(takeWhile(() => !!this.call)).subscribe(() => {
+            interval(1000).pipe(takeWhile(() => this.call === callToPlay
+                && decodeGeneration === this.audioDecodeGeneration)).subscribe(() => {
                 if (this.audioContext && !isNaN(this.audioContext.currentTime)) {
-                    if (isNaN(this.audioSourceStartTime)) {
-                        this.audioSourceStartTime = this.audioContext.currentTime;
-                    }
-
                     if (!this.livefeedPaused) {
                         this.event.emit({ time: this.audioContext.currentTime - this.audioSourceStartTime });
                     }
                 }
             });
         }, () => {
-            this.event.emit({ call: this.call, queue });
+            if (this.call !== callToPlay || decodeGeneration !== this.audioDecodeGeneration) {
+                return;
+            }
+
+            this.event.emit({ call: callToPlay, queue });
 
             this.skip({ delay: false });
         });
@@ -658,6 +680,8 @@ export class EmberScannerService implements OnDestroy {
     }
 
     stop(options?: { emit?: boolean }): void {
+        this.audioDecodeGeneration++;
+
         if (this.audioSource) {
             this.audioSource.onended = null;
             this.audioSource.stop();
@@ -710,10 +734,12 @@ export class EmberScannerService implements OnDestroy {
 
         if (category) {
             if (this.livefeedMapPriorToHoldSystem) {
+                this.cancelLivefeedTimers(this.livefeedMapPriorToHoldSystem);
                 this.livefeedMapPriorToHoldSystem = undefined;
             }
 
             if (this.livefeedMapPriorToHoldTalkgroup) {
+                this.cancelLivefeedTimers(this.livefeedMapPriorToHoldTalkgroup);
                 this.livefeedMapPriorToHoldTalkgroup = undefined;
             }
 
@@ -735,11 +761,6 @@ export class EmberScannerService implements OnDestroy {
             });
 
             this.rebuildCategories();
-
-            if (this.call && !this.livefeedMap[this.call.system] && this.livefeedMap[this.call.system][this.call.talkgroup]) {
-                clearTimer(this.livefeedMap[this.call.system][this.call.talkgroup]);
-                this.skip();
-            }
 
             this.syncLivefeedMap();
 
@@ -829,6 +850,18 @@ export class EmberScannerService implements OnDestroy {
         if (this.call && !isActive(this.call)) {
             this.skip();
         }
+    }
+
+    private cancelLivefeedTimers(map: EmberScannerLivefeedMap): void {
+        Object.keys(map).forEach((system) => {
+            Object.keys(map[+system]).forEach((talkgroup) => {
+                const livefeed = map[+system][+talkgroup];
+
+                livefeed.timer?.unsubscribe();
+                livefeed.timer = undefined;
+                livefeed.minutes = undefined;
+            });
+        });
     }
 
     private clearQueue(): void {
@@ -1331,10 +1364,10 @@ export class EmberScannerService implements OnDestroy {
         this.openWebsocket();
     }
 
-    private saveLivefeedMap(): void {
-        const lfm = Object.keys(this.livefeedMap).reduce((sysMap: { [key: number]: { [key: number]: boolean } }, sys: string) => {
-            sysMap[+sys] = Object.keys(this.livefeedMap[+sys]).reduce((tgMap: { [key: number]: boolean }, tg: string) => {
-                tgMap[+tg] = this.livefeedMap[+sys][+tg].active;
+    private saveLivefeedMap(map = this.livefeedMap): void {
+        const lfm = Object.keys(map).reduce((sysMap: { [key: number]: { [key: number]: boolean } }, sys: string) => {
+            sysMap[+sys] = Object.keys(map[+sys]).reduce((tgMap: { [key: number]: boolean }, tg: string) => {
+                tgMap[+tg] = map[+sys][+tg].active;
                 return tgMap;
             }, {});
             return sysMap;

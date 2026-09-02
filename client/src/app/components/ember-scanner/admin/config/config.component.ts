@@ -196,8 +196,12 @@ export class EmberScannerAdminConfigComponent implements OnDestroy, OnInit {
     async save(): Promise<void> {
         if (!this.form) { return; }
 
-        this.form.markAsPristine();
+        try {
+            this.config = await this.adminService.saveConfig(this.form.getRawValue());
 
-        await this.adminService.saveConfig(this.form.getRawValue());
+            this.form.markAsPristine();
+        } catch {
+            this.form.markAsDirty();
+        }
     }
 }
