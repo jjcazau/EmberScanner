@@ -813,6 +813,18 @@ export class EmberScannerService implements OnDestroy {
         const events = ['keydown', 'mousedown', 'touchstart'];
 
         const bootstrap = async () => {
+            // Web Audio defaults to ambient sound on iOS, which obeys Silent Mode.
+            // Declare media playback before creating either audio context.
+            try {
+                const audioSession = (navigator as Navigator & {
+                    audioSession?: { type: string };
+                }).audioSession;
+                if (audioSession) audioSession.type = 'playback';
+            } catch (error) {
+                // An unsupported session override must not prevent audio startup.
+                console.warn('Unable to configure the playback audio session', error);
+            }
+
             if (!this.audioContext) {
                 this.audioContext = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'playback' });
 

@@ -44,3 +44,12 @@ html {
 body {
 	height: 100dvh;
 }
+
+// Size the root canvas explicitly in installed apps: iOS can otherwise leave
+// a gap below a translucent status bar when html uses a percentage height.
+@media (display-mode: standalone) {
+	html,
+	body {
+		height: 100vh;
+	}
+}

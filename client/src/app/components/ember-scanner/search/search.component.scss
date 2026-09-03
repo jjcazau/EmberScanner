@@ -243,6 +243,7 @@
   justify-content: space-between;
   min-height: 56px;
   padding: 0 16px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   z-index: 2;
 
   .mat-icon {
@@ -406,6 +407,5 @@
 
   .results-footer {
     min-height: 58px;
-    padding-bottom: env(safe-area-inset-bottom);
   }
 }

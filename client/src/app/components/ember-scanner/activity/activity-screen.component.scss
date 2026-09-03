@@ -1,6 +1,6 @@
 :host { display: block; background: #1e1e1e; min-height: 100%; color: #a3a8ab; }
 * { box-sizing: border-box; }
-.activity-screen { max-width: 1200px; margin: 0 auto; padding: 24px; }
+.activity-screen { max-width: 1200px; margin: 0 auto; padding: 24px; padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
 button, input, select { font: inherit; }
 button { cursor: pointer; }
 button:disabled { cursor: default; opacity: .4; }
@@ -52,7 +52,7 @@ h2 { margin: 0; font-size: 13px; letter-spacing: .08em; font-weight: 600; }
 .screen-footer { font-size: 11px; margin-top: 18px; }.screen-footer button { margin-left: 8px; }
 .empty { padding: 50px 12px; text-align: center; font: 12px monospace; }.error { padding: 14px 0; color: #ffba97; font-size: 12px; }.error button { margin-left: 10px; }
 @media (max-width: 650px) {
-  .activity-screen { padding: 16px; }.screen-header { gap: 12px; }.updated { display: none; }.display { padding: 18px 14px; }
+  .activity-screen { padding: 16px; padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }.screen-header { gap: 12px; }.updated { display: none; }.display { padding: 18px 14px; }
   .ranges { flex: 1; }.ranges button { flex: 1; }.controls select { flex: 1; max-width: none; }.controls > input { width: 75%; }
   .chart-context { flex-wrap: wrap; }.chart-footer { max-width: 100%; }.chart-heading { margin-bottom: 16px; }
   .timeline { min-width: 0; grid-template-columns: 28px minmax(0, 1fr); gap: 8px; padding-right: 8px; }
