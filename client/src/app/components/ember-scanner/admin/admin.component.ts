@@ -14,7 +14,7 @@ import { AdminEvent, Config, EmberScannerAdminService } from './admin.service';
 import { ConfigSection, EmberScannerAdminConfigComponent } from './config/config.component';
 import { EmberScannerAdminLogsComponent } from './logs/logs.component';
 
-type AdminSection = 'overview' | 'configuration' | 'logs' | 'tools';
+type AdminSection = 'overview' | 'activity' | 'configuration' | 'logs' | 'tools';
 
 interface AdminNavigationItem {
     id: AdminSection;
@@ -37,6 +37,7 @@ export class EmberScannerAdminComponent implements OnDestroy {
 
     readonly navigation: AdminNavigationItem[] = [
         { id: 'overview', icon: 'space_dashboard', label: 'Overview', description: 'Server health and recommended actions.' },
+        { id: 'activity', icon: 'bar_chart', label: 'Radio activity', description: 'Explore call volume, talkgroup hotspots and patterns over time.' },
         { id: 'configuration', icon: 'tune', label: 'Configuration', description: 'Manage scanner behaviour and data sources.' },
         { id: 'logs', icon: 'receipt_long', label: 'Activity logs', description: 'Search and review recent server events.' },
         { id: 'tools', icon: 'construction', label: 'Admin tools', description: 'Import data, export settings and manage security.' },

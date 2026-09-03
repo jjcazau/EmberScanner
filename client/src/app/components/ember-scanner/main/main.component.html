@@ -196,8 +196,8 @@
       SEARCH
     </button>
     <div class="spacer"></div>
-    <button class="ember-button" (click)="cycleVolume()" [attr.aria-label]="'Volume ' + volumeLevel + ' percent'">
-      VOLUME<br>{{ volumeLevel ? volumeLevel + '%' : 'MUTED' }}
+    <button class="ember-button" (click)="showActivityPanel()">
+      ACTIVITY
     </button>
     <div class="spacer"></div>
     <button class="ember-button icon-button" (click)="toggleFullscreenButton()" aria-label="Toggle fullscreen">

@@ -21,6 +21,7 @@ import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
 import { NgModule } from '@angular/core';
 import { AppSharedModule } from '../../../shared/shared.module';
 import { EmberScannerAdminComponent } from './admin.component';
+import { EmberScannerAdminActivityComponent } from './activity/admin-activity.component';
 import { EmberScannerAdminService } from './admin.service';
 import { EmberScannerAdminConfigComponent } from './config/config.component';
 import { EmberScannerAdminAccessComponent } from './config/access/access.component';
@@ -70,5 +71,5 @@ import { EmberScannerAdminPasswordComponent } from './tools/password/password.co
         EmberScannerAdminToolsComponent,
         EmberScannerAdminUnitComponent,
     ],
-    exports: [EmberScannerAdminComponent], imports: [AppSharedModule], providers: [EmberScannerAdminService, provideHttpClient(withInterceptorsFromDi())] })
+    exports: [EmberScannerAdminComponent], imports: [AppSharedModule, EmberScannerAdminActivityComponent], providers: [EmberScannerAdminService, provideHttpClient(withInterceptorsFromDi())] })
 export class EmberScannerAdminModule { }

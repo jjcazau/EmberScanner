@@ -126,6 +126,7 @@ var SqliteSchema = []string{
   );`,
 
 	`CREATE INDEX IF NOT EXISTS "calls_idx" ON "calls" ("systemId","siteRef","talkgroupId","timestamp");`,
+	`CREATE INDEX IF NOT EXISTS "calls_activity_idx" ON "calls" ("timestamp","systemId","talkgroupId");`,
 
 	`CREATE TABLE IF NOT EXISTS "callFrequencies" (
     "callFrequencyId" integer NOT NULL PRIMARY KEY AUTOINCREMENT,

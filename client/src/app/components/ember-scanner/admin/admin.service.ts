@@ -21,7 +21,8 @@ import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http
 import { EventEmitter, Injectable, OnDestroy } from '@angular/core';
 import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { firstValueFrom, timer } from 'rxjs';
+import { catchError, firstValueFrom, Observable, throwError, timer } from 'rxjs';
+import { ScannerActivity } from '../activity/activity';
 
 export interface Access {
     id?: string;
@@ -336,6 +337,15 @@ export class EmberScannerAdminService implements OnDestroy {
 
     getLeds(): string[] {
         return ['blue', 'cyan', 'green', 'magenta', 'orange', 'red', 'white', 'yellow'];
+    }
+
+    getActivity(hours: number, systemId: number): Observable<ScannerActivity> {
+        return this.ngHttpClient.get<ScannerActivity>(this.getUrl('activity'), {
+            headers: this.getHeaders(), params: { hours, system: systemId },
+        }).pipe(catchError(error => {
+            if (error instanceof HttpErrorResponse && error.status === 401) this.errorHandler(error);
+            return throwError(() => error);
+        }));
     }
 
     async getLogs(options: LogsQueryOptions): Promise<LogsQuery | undefined> {

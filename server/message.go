@@ -25,6 +25,7 @@ import (
 )
 
 const (
+	MessageCommandActivity       = "ACT"
 	MessageCommandCall           = "CAL"
 	MessageCommandConfig         = "CFG"
 	MessageCommandExpired        = "XPR"

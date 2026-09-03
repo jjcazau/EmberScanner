@@ -486,6 +486,9 @@ func (controller *Controller) ProcessMessage(client *Client, message *Message) e
 			return err
 		}
 
+	} else if message.Command == MessageCommandActivity {
+		return controller.ProcessMessageCommandActivity(client, message)
+
 	} else if message.Command == MessageCommandConfig {
 		client.SendConfig(controller.Groups, controller.Options, controller.Systems, controller.Tags)
 

@@ -19,6 +19,7 @@
         <span class="admin-nav-label">Workspace</span>
         @for (item of navigation; track item.id) {
           <button type="button" class="admin-nav-item" [class.active]="activeSection === item.id"
+            [attr.aria-label]="item.label" [title]="item.label"
             [attr.aria-current]="activeSection === item.id ? 'page' : null" (click)="selectSection(item.id)">
             <mat-icon>{{ item.icon }}</mat-icon>
             <span>{{ item.label }}</span>
@@ -52,9 +53,9 @@
               <h2>Your scanner, at a glance</h2>
               <p>Manage ingestion, access, radio systems and maintenance from one place.</p>
             </div>
-            <button type="button" mat-flat-button color="primary" (click)="selectSection('configuration')">
-              <mat-icon>settings</mat-icon>
-              Open configuration
+            <button type="button" mat-flat-button color="primary" (click)="selectSection('activity')">
+              <mat-icon>bar_chart</mat-icon>
+              Explore radio activity
             </button>
           </div>
 
@@ -87,6 +88,10 @@
             <ember-scanner-admin-todos></ember-scanner-admin-todos>
           </div>
         </section>
+
+        @if (activeSection === 'activity') {
+          <section aria-label="Radio activity"><ember-scanner-admin-activity /></section>
+        }
 
         <section [hidden]="activeSection !== 'configuration'" aria-label="Configuration">
           <ember-scanner-admin-config #configComponent></ember-scanner-admin-config>

@@ -20,7 +20,8 @@
 
 import { EventEmitter, Inject, Injectable, OnDestroy, DOCUMENT } from '@angular/core';
 import { Router } from '@angular/router';
-import { interval, Subscription, timer } from 'rxjs';
+import { interval, Observable, Subject, Subscription, timer, timeout } from 'rxjs';
+import { ScannerActivity } from './activity/activity';
 import { takeWhile } from 'rxjs/operators';
 import {
     EmberScannerAvoidOptions,
@@ -52,6 +53,7 @@ enum WebsocketCallFlag {
 }
 
 enum WebsocketCommand {
+    Activity = 'ACT',
     Call = 'CAL',
     Config = 'CFG',
     Expired = 'XPR',
@@ -71,6 +73,26 @@ export class EmberScannerService implements OnDestroy {
     static STORAGE_KEY_PIN = 'ember-scanner-pin';
 
     event = new EventEmitter<EmberScannerEvent>();
+
+    private activitySequence = 0;
+    private readonly activityResponses = new Subject<{ id: string; data: ScannerActivity & { error?: string } }>();
+
+    getActivity(hours: number, systemId: number): Observable<ScannerActivity> {
+        return new Observable<ScannerActivity>(observer => {
+            if (this.websocket?.readyState !== WebSocket.OPEN) {
+                observer.error(new Error('Scanner link offline'));
+                return;
+            }
+            const id = String(++this.activitySequence);
+            const subscription = this.activityResponses.subscribe(response => {
+                if (response.id !== id) return;
+                if (response.data.error) observer.error(new Error(response.data.error));
+                else { observer.next(response.data); observer.complete(); }
+            });
+            this.sendtoWebsocket(WebsocketCommand.Activity, { hours, system: systemId }, id);
+            return () => subscription.unsubscribe();
+        }).pipe(timeout(12_000));
+    }
 
     private audioContext: AudioContext | undefined;
 
@@ -1001,6 +1023,10 @@ export class EmberScannerService implements OnDestroy {
                         }
                     }
 
+                    break;
+
+                case WebsocketCommand.Activity:
+                    this.activityResponses.next({ id: message[2], data: message[1] });
                     break;
 
                 case WebsocketCommand.Config: {

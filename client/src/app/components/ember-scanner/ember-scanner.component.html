@@ -1,4 +1,10 @@
 <mat-sidenav-container [hasBackdrop]="false">
+    <mat-sidenav #activityPanel [autoFocus]="true" [disableClose]="true" position="end"
+        (openedChange)="activityOpen = $event">
+        @if (activityOpen) {
+          <ember-scanner-activity-screen (close)="activityPanel.close()" />
+        }
+    </mat-sidenav>
     <mat-sidenav #searchPanel [autoFocus]="false" [disableClose]="true" position="start">
         <div class="panel search">
             <mat-toolbar>
@@ -17,6 +23,7 @@
     </mat-sidenav>
     <mat-sidenav-content>
         <ember-scanner-main #mainComponent
+            (openActivityPanel)="activityOpen = true; activityPanel.open()"
             (openSearchPanel)="scrollTop(scrollableSearch); searchPanel.open(); searchComponent.searchCalls()"
             (toggleFullscreen)="toggleFullscreen()">
         </ember-scanner-main>

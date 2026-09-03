@@ -1,0 +1,159 @@
+<div class="activity-view" [attr.aria-busy]="loading">
+  <div class="activity-toolbar">
+    <div class="range-switch" role="group" aria-label="Activity time range">
+      @for (range of ranges; track range.hours) {
+        <button type="button" [class.active]="hours === range.hours" [attr.aria-pressed]="hours === range.hours"
+          (click)="rangeChange.emit(range.hours)">{{ range.label }}</button>
+      }
+    </div>
+    <div class="toolbar-actions">
+      <select aria-label="Filter by system" [ngModel]="systemId" (ngModelChange)="systemChange.emit(+$event)" [disabled]="!data">
+        <option [ngValue]="0">All systems</option>
+        @for (system of data?.systems; track system.id) { <option [ngValue]="system.id">{{ system.label }}</option> }
+      </select>
+      <button type="button" class="refresh-button" (click)="refresh.emit()" [disabled]="loading" aria-label="Refresh activity">
+        <span aria-hidden="true">↻</span> {{ loading ? 'Updating' : 'Refresh' }}
+      </button>
+    </div>
+  </div>
+
+  @if (error) {
+    <div class="notice" role="alert">Activity couldn’t be updated. {{ data ? 'Showing the last successful update.' : 'Check your connection and try again.' }}
+      <button type="button" (click)="refresh.emit()" [disabled]="loading">Try again</button>
+    </div>
+  }
+  @if (!data && !error) {
+    <div class="loading-state" role="status"><span class="loading-dot"></span> Loading call activity…</div>
+  }
+
+  @if (data) {
+    <div class="activity-context">
+      <span><span class="status-dot" [class.stale]="error"></span>{{ rangeLabel }} <span class="context-divider">/</span> {{ focusGroup ? (focusGroup.label || focusGroup.reference) : 'All talkgroups' }}</span>
+      <span>Updated {{ data.end | date:'HH:mm:ss' }} · every 30 seconds</span>
+    </div>
+
+    <div class="metrics">
+      <article class="metric"><span>Recorded calls</span><strong>{{ total | number }}</strong><small>{{ rangeLabel }}</small></article>
+      <article class="metric"><span>Calls per hour</span><strong>{{ average | number:'1.0-1' }}</strong><small>Average across this range</small></article>
+      <article class="metric"><span>Active talkgroups</span><strong>{{ activeGroups | number }}</strong><small>{{ focusGroup ? 'Isolated talkgroup' : 'With at least one recording' }}</small></article>
+      <article class="metric accent"><span>Peak interval</span><strong>{{ peak | number }} <em>calls</em></strong><small>In one {{ bucketLabel }} bucket</small></article>
+    </div>
+
+    @if (!data.totalCalls) {
+      <div class="empty-state"><span class="empty-symbol" aria-hidden="true">▥</span><h2>No calls in this time range</h2>
+        <p>Choose a longer range or another system. Activity will appear as recordings arrive.</p>
+      </div>
+    } @else {
+      <section class="activity-card timeline-card" aria-labelledby="timeline-title">
+        <div class="card-heading">
+          <div><span class="eyebrow">Traffic over time</span><h2 id="timeline-title">Call activity</h2>
+            <p>{{ bucketLabel }} buckets · select a bar to inspect that period</p></div>
+          <div class="chart-actions">
+            @if (selectedBucket !== null || selectedTalkgroup !== null) {
+              <button type="button" (click)="clearSelection()">Clear selection</button>
+            }
+            <button type="button" class="peak-button" (click)="selectBucket(peakIndex)" [disabled]="!peak">View peak ↗</button>
+          </div>
+        </div>
+        @if (focusGroup) {
+          <div class="focus-chip">{{ focusGroup.systemLabel }} / {{ focusGroup.label || focusGroup.reference }}
+            <button type="button" (click)="selectGroup(focusGroup.id)" aria-label="Show all talkgroups">×</button></div>
+        }
+        <div class="timeline-layout">
+          <div class="y-axis" aria-hidden="true"><span>{{ peak | number }}</span><span>{{ peak / 2 | number:'1.0-0' }}</span><span>0</span></div>
+          <div>
+            <div class="bar-chart" role="group" aria-label="Calls by time interval">
+              @for (bar of bars; track $index; let i = $index) {
+                <button type="button" class="bar-slot" [class.selected]="selectedBucket === i" [class.dimmed]="selectedBucket !== null && selectedBucket !== i"
+                  [style.flex-grow]="bar.weight"
+                  [title]="bar.label" [attr.aria-label]="bar.label" [attr.aria-pressed]="selectedBucket === i" (click)="selectBucket(i)">
+                  <span class="bar" [style.height.%]="bar.height" [class.zero]="!bar.count"></span>
+                </button>
+              }
+            </div>
+            <div class="time-axis" aria-hidden="true">
+              @for (tick of ticks; track tick.position) { <span [style.left.%]="tick.position">{{ tick.label }}</span> }
+            </div>
+          </div>
+        </div>
+        <div class="timeline-caption"><span>Time · {{ timezone }}</span><span>First and last buckets may be partial</span></div>
+        @if (selectedBucket !== null) {
+          <p class="scale-note" role="status"><strong>{{ selectedPeriod }}</strong> · {{ selectedCount | number }} calls across the system filter.
+            @if (focusGroup) { <strong>{{ focusGroup.buckets[selectedBucket] | number }}</strong> from {{ focusGroup.label || focusGroup.reference }}. }
+            @else if (leaders.length) { Busiest: <strong>{{ leaders[0].group.label || leaders[0].group.reference }}</strong> ({{ leaders[0].count | number }} calls). }
+          </p>
+        }
+      </section>
+
+      <section class="activity-card heatmap-card" aria-labelledby="heatmap-title">
+        <div class="card-heading">
+          <div><span class="eyebrow">Spot the hotspots</span><h2 id="heatmap-title">Talkgroup intensity</h2><p>Each row is a talkgroup. Darker cells mean more calls.</p></div>
+          <label class="search-field"><span class="sr-only">Find a talkgroup</span><input type="search" placeholder="Find talkgroup or ID…" [(ngModel)]="search" (ngModelChange)="filterGroups()"></label>
+        </div>
+        <div class="heatmap-options">
+          <div class="scale-switch" role="group" aria-label="Heatmap colour scale">
+            <button type="button" [class.active]="!relative" [attr.aria-pressed]="!relative" (click)="relative = false; rebuild()">Compare volume</button>
+            <button type="button" [class.active]="relative" [attr.aria-pressed]="relative" (click)="relative = true; rebuild()">Patterns per talkgroup</button>
+          </div>
+          <div class="legend" [attr.aria-label]="relative ? 'Colours range from zero to each talkgroup’s own peak' : 'Colours range from zero to ' + maxCell + ' calls per cell'">
+            <span>0</span><i class="heat-0"></i><i class="heat-1"></i><i class="heat-2"></i><i class="heat-3"></i><i class="heat-4"></i><span>{{ relative ? 'Row peak' : maxCell + ' calls' }}</span>
+          </div>
+        </div>
+        <p class="scale-note">{{ relative ? 'Each row uses its own peak: reveals patterns on quieter channels, not comparable call volume.' : 'One shared scale across all talkgroups: compare actual call volume between rows.' }}</p>
+        @if (rows.length) {
+          <div class="heatmap-scroll" tabindex="0" role="region" aria-label="Talkgroup heatmap, scroll horizontally on small screens">
+            <div class="heatmap-grid">
+              <div class="heatmap-header"><span>Talkgroup / system</span><div class="heatmap-axis">
+                @for (tick of ticks; track tick.position) { <span [style.left.%]="tick.position">{{ tick.label }}</span> }
+              </div><span>Calls</span></div>
+              @for (row of rows; track row.group.id) {
+                <div class="heatmap-row" [class.focused]="selectedTalkgroup === row.group.id">
+                  <button type="button" class="group-label" [title]="row.group.name || row.group.label" [attr.aria-pressed]="selectedTalkgroup === row.group.id"
+                    [attr.aria-label]="'Isolate ' + row.group.systemLabel + ' ' + (row.group.label || row.group.reference)" (click)="selectGroup(row.group.id)">
+                    <strong>{{ row.group.label || row.group.reference }}</strong><small>{{ row.group.systemLabel }} · {{ row.group.reference }}</small>
+                  </button>
+                  <div class="heatmap-cells" [style.grid-template-columns]="bucketColumns">
+                    @for (cell of row.cells; track $index; let i = $index) {
+                      <button type="button" class="heat-cell" [class]="'heat-cell heat-' + cell.level" [class.selected]="selectedBucket === i"
+                        [title]="cell.label" [attr.aria-label]="cell.label" [attr.aria-pressed]="selectedBucket === i"
+                        (click)="inspectCell(row.group.id, i)"></button>
+                    }
+                  </div>
+                  <span class="row-total">{{ row.group.calls | number }}</span>
+                </div>
+              }
+            </div>
+          </div>
+        } @else { <div class="no-matches">No talkgroups match “{{ search }}”. <button type="button" (click)="search = ''; filterGroups()">Clear search</button></div> }
+        <div class="heatmap-footer"><span>{{ matches ? page * pageSize + 1 : 0 }}–{{ page * pageSize + rows.length }} of {{ matches }} active talkgroups · busiest first</span>
+          <div><button type="button" aria-label="Previous talkgroups" [disabled]="!page" (click)="movePage(-1)">←</button>
+            <button type="button" aria-label="Next talkgroups" [disabled]="(page + 1) * pageSize >= matches" (click)="movePage(1)">→</button></div>
+        </div>
+      </section>
+
+      <div class="activity-bottom">
+        <section class="activity-card" aria-labelledby="ranking-title">
+          <div class="card-heading"><div><span class="eyebrow">Most active channels</span><h2 id="ranking-title">Busiest talkgroups</h2><p>{{ selectedPeriod }}</p></div><span class="count-badge">Top 5</span></div>
+          @for (leader of leaders; track leader.group.id; let i = $index) {
+            <button type="button" class="leader" [attr.aria-pressed]="selectedTalkgroup === leader.group.id" (click)="selectGroup(leader.group.id)">
+              <span class="rank">{{ i + 1 }}</span><span class="leader-main"><strong>{{ leader.group.label || leader.group.reference }}</strong>
+                <small>{{ leader.group.systemLabel }} · {{ leader.share | number:'1.0-1' }}% of calls</small><span class="rank-track"><span [style.width.%]="leader.width"></span></span></span>
+              <span class="leader-count">{{ leader.count | number }}<small>calls</small></span>
+            </button>
+          } @empty { <p class="no-matches">No calls in this interval. Select another bar to explore.</p> }
+        </section>
+        <aside class="activity-insight" aria-labelledby="period-title">
+          <span class="eyebrow">{{ selectedBucket === null ? 'The big picture' : 'Interval spotlight' }}</span>
+          <h2 id="period-title">{{ selectedPeriod }}</h2>
+          <strong class="spotlight-count">{{ selectedCount | number }} <span>calls</span></strong>
+          <p>{{ selectedBucket === null ? 'Select a timeline bar or heatmap cell to see which talkgroups drove that period.' : 'The ranking shows the talkgroups contributing to this interval across the selected system filter.' }}</p>
+          <div class="insight-rule"></div>
+          <h3>What counts as activity?</h3>
+          <p>One stored recording is one call, counted under its primary talkgroup. Rankings show radio traffic, not listener popularity.</p>
+          <p>Times reflect when calls were recorded. Deleted recordings are excluded; a quiet interval can also mean missing coverage.</p>
+        </aside>
+      </div>
+    }
+    <p class="activity-footnote">Recording time · {{ timezone }} · Call volume measures transmissions, not audio duration.</p>
+  }
+</div>

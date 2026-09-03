@@ -126,6 +126,7 @@ var PostgresqlSchema = []string{
   );`,
 
 	`CREATE INDEX IF NOT EXISTS "calls_idx" ON "calls" ("systemId","talkgroupId","siteRef","timestamp");`,
+	`CREATE INDEX IF NOT EXISTS "calls_activity_idx" ON "calls" ("timestamp","systemId","talkgroupId");`,
 
 	`CREATE TABLE IF NOT EXISTS "callFrequencies" (
     "callFrequencyId" bigserial NOT NULL PRIMARY KEY,

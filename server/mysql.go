@@ -126,6 +126,7 @@ var MysqlSchema = []string{
   );`,
 
 	`CREATE INDEX IF NOT EXISTS "calls_idx" ON "calls" ("systemId","siteRef","talkgroupId","timestamp");`,
+	`CREATE INDEX IF NOT EXISTS "calls_activity_idx" ON "calls" ("timestamp","systemId","talkgroupId");`,
 
 	`CREATE TABLE IF NOT EXISTS "callFrequencies" (
     "callFrequencyId" bigint NOT NULL AUTO_INCREMENT PRIMARY KEY,

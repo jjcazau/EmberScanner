@@ -1,0 +1,102 @@
+<div class="activity-screen" (keydown.escape)="close.emit()">
+  <header class="screen-header">
+    <button type="button" class="scanner-button back" (click)="close.emit()" aria-label="Back to scanner">← SCANNER</button>
+    <h1>ACTIVITY</h1>
+    <span class="updated">{{ loading ? 'UPDATING…' : data ? (data.end | date:'HH:mm:ss') : 'NO DATA' }}</span>
+  </header>
+  <div class="controls">
+    <div class="ranges" role="group" aria-label="Activity time range">
+      @for (range of ranges; track range.hours) {
+        <button type="button" class="scanner-button" [class.active]="hours === range.hours"
+          [attr.aria-pressed]="hours === range.hours" (click)="setRange(range.hours)">{{ range.hours === 168 ? '7D' : range.hours + 'H' }}</button>
+      }
+    </div>
+    <select aria-label="Activity system" [ngModel]="systemId" (ngModelChange)="setSystem(+$event)" [disabled]="!data">
+      <option [ngValue]="0">All systems</option>
+      @for (system of data?.systems; track system.id) { <option [ngValue]="system.id">{{ system.label }}</option> }
+    </select>
+    <input type="search" aria-label="Find talkgroup" placeholder="Find talkgroup / ID" [(ngModel)]="search" (ngModelChange)="filterGroups()">
+    <button type="button" class="scanner-button" [disabled]="loading" (click)="refreshRequests.next()" aria-label="Refresh activity">↻</button>
+  </div>
+
+  @if (error) { <div class="error" role="alert">Activity unavailable. {{ data ? 'Showing last update.' : 'Check the scanner connection.' }} <button type="button" (click)="refreshRequests.next()">Retry</button></div> }
+  @if (!data && !error) { <div class="display empty" role="status">LOADING ACTIVITY…</div> }
+  @if (data) {
+    <div class="display" [attr.aria-busy]="loading">
+      <section aria-labelledby="call-activity-heading">
+        <div class="chart-heading">
+          <h2 id="call-activity-heading">CALL ACTIVITY</h2>
+          <div class="chart-context">
+            <span>{{ focusGroup ? (focusGroup.label || focusGroup.reference) : 'All talkgroups' }}</span>
+            @if (selectedTalkgroup !== null || selectedBucket !== null) { <button type="button" (click)="clearSelection()" aria-label="Clear chart selection">× Clear</button> }
+            <span>{{ bucketLabel }} intervals</span>
+          </div>
+        </div>
+        <div class="horizontal-scroll" tabindex="0" role="region" aria-label="Call activity timeline, scroll for more times">
+          <div class="timeline" [class.dense]="ticks.length > 8">
+            <div class="y-axis" aria-hidden="true"><span>{{ peak | number }}</span><span>{{ peak / 2 | number:'1.0-0' }}</span><span>0</span></div>
+            <div>
+              <div class="bars" role="group" aria-label="Calls by time interval">
+                <div class="time-grid" aria-hidden="true">@for (tick of ticks; track tick.position) { <i [style.left.%]="tick.position"></i> }</div>
+                @for (bar of bars; track $index; let i = $index) {
+                  <button type="button" class="bar-slot" [style.flex-grow]="bar.weight" [class.selected]="selectedBucket === i"
+                    [class.dimmed]="selectedBucket !== null && selectedBucket !== i" [title]="bar.label" [attr.aria-label]="bar.label"
+                    [attr.aria-pressed]="selectedBucket === i" (click)="selectBucket(i)">
+                    <span class="bar" [class.zero]="!bar.count" [style.height.%]="bar.height"></span>
+                  </button>
+                }
+              </div>
+              <div class="time-axis" aria-hidden="true">@for (tick of ticks; track tick.position) { <span [style.left.%]="tick.position">{{ tick.label }}</span> }</div>
+            </div>
+          </div>
+        </div>
+        <div class="chart-footer">
+          <span>{{ data.start | date:'d MMM, HH:mm' }} — {{ data.end | date:'d MMM, HH:mm' }} · {{ timezone }}</span>
+          @if (selectedBucket !== null) { <span role="status">{{ selectedPeriod }} · {{ (focusGroup ? focusGroup.buckets[selectedBucket] : selectedCount) | number }} calls</span> }
+        </div>
+      </section>
+
+      <section class="intensity" aria-labelledby="intensity-heading">
+        <div class="chart-heading">
+          <h2 id="intensity-heading">TALKGROUP INTENSITY</h2>
+          <div class="heat-controls">
+            <label title="Scale each talkgroup to its own busiest interval"><input type="checkbox" [(ngModel)]="relative" (ngModelChange)="rebuild()"> Relative</label>
+            <div class="legend" [attr.aria-label]="relative ? 'Zero to each talkgroup’s peak' : 'Zero to ' + maxCell + ' calls'">
+              <span>0</span><i class="heat-0"></i><i class="heat-1"></i><i class="heat-2"></i><i class="heat-3"></i><i class="heat-4"></i><span>{{ relative ? 'Row peak' : maxCell }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="horizontal-scroll" tabindex="0" role="region" aria-label="Talkgroup intensity heatmap, scroll for more times">
+          <div class="heatmap">
+            <div class="heatmap-header"><span>TALKGROUP / SYSTEM</span><div class="time-axis">
+              @for (tick of ticks; track tick.position) { <span [style.left.%]="tick.position">{{ tick.label }}</span> }
+            </div><span>CALLS</span></div>
+            @for (row of rows; track row.group.id) {
+              <div class="heatmap-row" [class.focused]="selectedTalkgroup === row.group.id">
+                <button type="button" class="group-label" [title]="row.group.name || row.group.label"
+                  [attr.aria-label]="'Isolate ' + row.group.systemLabel + ' ' + (row.group.label || row.group.reference)"
+                  [attr.aria-pressed]="selectedTalkgroup === row.group.id" (click)="selectGroup(row.group.id)">
+                  <strong>{{ row.group.label || row.group.reference }}</strong><small>{{ row.group.systemLabel }} · {{ row.group.reference }}</small>
+                </button>
+                <div class="heatmap-cells" [style.grid-template-columns]="bucketColumns">
+                  @for (cell of row.cells; track $index; let i = $index) {
+                    <button type="button" [class]="'heat-cell heat-' + cell.level" [class.selected]="selectedBucket === i"
+                      [title]="cell.label" [attr.aria-label]="cell.label" [attr.aria-pressed]="selectedBucket === i && selectedTalkgroup === row.group.id"
+                      (click)="inspectCell(row.group.id, i)"></button>
+                  }
+                </div>
+                <span class="row-total">{{ row.group.calls | number }}</span>
+              </div>
+            } @empty { <p class="empty">{{ data.totalCalls ? 'NO MATCHING TALKGROUPS' : 'NO CALLS IN THIS RANGE' }}</p> }
+          </div>
+        </div>
+        @if (selectedBucket !== null && focusGroup) { <p class="cell-readout" role="status">{{ focusGroup.label || focusGroup.reference }} · {{ selectedPeriod }} · {{ focusGroup.buckets[selectedBucket] | number }} calls</p> }
+      </section>
+    </div>
+    <footer class="screen-footer">
+      <span>{{ matches ? page * pageSize + 1 : 0 }}–{{ page * pageSize + rows.length }} / {{ matches }} talkgroups</span>
+      <div><button type="button" class="scanner-button" aria-label="Previous talkgroups" [disabled]="!page" (click)="movePage(-1)">←</button>
+        <button type="button" class="scanner-button" aria-label="Next talkgroups" [disabled]="(page + 1) * pageSize >= matches" (click)="movePage(1)">→</button></div>
+    </footer>
+  }
+</div>

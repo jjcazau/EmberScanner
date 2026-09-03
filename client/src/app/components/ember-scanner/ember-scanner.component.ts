@@ -32,11 +32,13 @@ import { EmberScannerNativeComponent } from './native/native.component';
     standalone: false
 })
 export class EmberScannerComponent implements OnDestroy, OnInit {
+    activityOpen = false;
     private eventSubscription;
 
     private livefeedMode: EmberScannerLivefeedMode = EmberScannerLivefeedMode.Offline;
 
     @ViewChild('searchPanel') private searchPanel: MatSidenav | undefined;
+    @ViewChild('activityPanel') private activityPanel: MatSidenav | undefined;
 
     constructor(
         private matSnackBar: MatSnackBar,
@@ -137,6 +139,7 @@ export class EmberScannerComponent implements OnDestroy, OnInit {
     }
 
     private eventHandler(event: EmberScannerEvent): void {
+        if (event.auth) this.activityPanel?.close();
         if (event.livefeedMode) {
             this.livefeedMode = event.livefeedMode;
         }

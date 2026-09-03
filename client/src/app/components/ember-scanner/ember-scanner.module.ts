@@ -28,6 +28,7 @@ import { EmberScannerNativeModule } from './native/native.module';
 import { EmberScannerPinComponent } from './pin/pin.component';
 import { EmberScannerSearchComponent } from './search/search.component';
 import { EmberScannerSelectComponent } from './select/select.component';
+import { EmberScannerActivityScreenComponent } from './activity/activity-screen.component';
 
 @NgModule({
     declarations: [
@@ -42,6 +43,7 @@ import { EmberScannerSelectComponent } from './select/select.component';
     imports: [
         AppSharedModule,
         EmberScannerNativeModule,
+        EmberScannerActivityScreenComponent,
     ],
     providers: [
         EmberScannerService,

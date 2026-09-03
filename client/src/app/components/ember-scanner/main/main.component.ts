@@ -134,8 +134,6 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
 
     type = '';
 
-    volumeLevel = 100;
-
     get showErrorsAndSpikes(): boolean {
         return this.config?.showErrorsAndSpikes ?? true;
     }
@@ -168,6 +166,7 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
     }
 
     @Output() openSearchPanel = new EventEmitter<void>();
+    @Output() openActivityPanel = new EventEmitter<void>();
 
     @Output() toggleFullscreen = new EventEmitter<void>();
 
@@ -451,6 +450,12 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
         }
     }
 
+    showActivityPanel(): void {
+        if (!this.config) return;
+        if (this.auth) this.authFocus();
+        else { this.emberScannerService.beep(); this.openActivityPanel.emit(); }
+    }
+
     skip(options?: { delay?: boolean }): void {
         if (this.auth) {
             this.authFocus();
@@ -466,14 +471,6 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
 
     stop(): void {
         this.emberScannerService.stop();
-    }
-
-    cycleVolume(): void {
-        this.volumeLevel = Math.round(this.emberScannerService.cycleVolume() * 100);
-
-        this.emberScannerService.beep(EmberScannerBeepStyle.Activate);
-
-        this.updateDimmer();
     }
 
     toggleFullscreenButton(): void {
