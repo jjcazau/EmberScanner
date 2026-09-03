@@ -73,6 +73,11 @@ export class EmberScannerComponent implements OnDestroy, OnInit {
          * 
          */
         timer(10000).subscribe(() => {
+            const isInstalledApp = window.matchMedia('(display-mode: standalone)').matches
+                || (navigator as Navigator & { standalone?: boolean }).standalone === true;
+
+            if (isInstalledApp) return;
+
             const ua: string = navigator.userAgent;
 
             if (ua.includes('Android') || ua.includes('iPad') || ua.includes('iPhone')) {
