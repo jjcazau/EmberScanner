@@ -76,22 +76,20 @@
   <div class="row big full" [ngClass]="{ 'patch-members': patched }">
     <span [title]="callTalkgroupName">{{ callTalkgroupName }}</span>
   </div>
-  <div class="row">
+  <div class="row details">
     <div>
       <span>Freq: {{ callFrequency || 0 }}</span>
     </div>
-    <div></div>
     <div>
       <span>TGID: {{ callTalkgroupId || 0 }}</span>
     </div>
   </div>
-  <div class="row">
+  <div class="row details">
     <div>
       @if (showErrorsAndSpikes) {
         <span>Errors: {{ callError || 0 }} Spike: {{ callSpike || 0 }} </span>
       }
     </div>
-    <div></div>
     <div>
       @if (callUnit) {
         <span>UID: {{ callUnit }}</span>
