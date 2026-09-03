@@ -623,7 +623,7 @@ func (controller *Controller) sendPinFailure(client *Client, ip string) {
 }
 
 func (controller *Controller) ProcessMessageCommandVersion(client *Client) {
-	p := map[string]string{"version": Version}
+	p := map[string]string{"version": Version, "brandingSubheading": controller.Options.BrandingSubheading}
 
 	if len(controller.Options.Branding) > 0 {
 		p["branding"] = controller.Options.Branding

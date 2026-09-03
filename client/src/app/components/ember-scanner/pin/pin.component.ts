@@ -24,6 +24,7 @@ import { EmberScannerService } from '../ember-scanner.service';
 })
 export class EmberScannerPinComponent implements OnChanges {
     @Input() branding = '';
+    @Input() brandingSubheading = '';
     @Input() busy = false;
     @Input() error = '';
 

@@ -1047,6 +1047,7 @@ export class EmberScannerService implements OnDestroy {
                     this.config = {
                         alerts: config.alerts,
                         branding: typeof config.branding === 'string' ? config.branding : '',
+                        brandingSubheading: typeof config.brandingSubheading === 'string' ? config.brandingSubheading : '',
                         dimmerDelay: typeof config.dimmerDelay === 'number' ? config.dimmerDelay : 5000,
                         email: typeof config.email === 'string' ? config.email : '',
                         groups: typeof config.groups !== null && typeof config.groups === 'object' ? config.groups : {},
@@ -1161,17 +1162,20 @@ export class EmberScannerService implements OnDestroy {
 
                     if (data !== null && typeof data === 'object') {
                         const branding = data['branding'];
+                        const brandingSubheading = data['brandingSubheading'];
                         const email = data['email'];
 
                         if (typeof branding === 'string') {
                             this.config.branding = branding;
                         }
 
+                        this.config.brandingSubheading = typeof brandingSubheading === 'string' ? brandingSubheading : '';
+
                         if (typeof email === 'string') {
                             this.config.email = email;
                         }
 
-                        if (this.config.branding || this.config.email) {
+                        if (this.config.branding || this.config.email || typeof brandingSubheading === 'string') {
                             this.event.emit({ config: this.config });
                         }
                     }

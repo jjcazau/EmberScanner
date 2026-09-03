@@ -148,6 +148,7 @@ export interface Options {
     audioConversion?: 0 | 1 | 2 | 3;
     autoPopulate?: boolean;
     branding?: string;
+    brandingSubheading?: string;
     dimmerDelay?: number;
     disableDuplicateDetection?: boolean;
     duplicateDetectionTimeFrame?: number;
@@ -578,6 +579,7 @@ export class EmberScannerAdminService implements OnDestroy {
             audioConversion: this.ngFormBuilder.control(options?.audioConversion),
             autoPopulate: this.ngFormBuilder.control(options?.autoPopulate),
             branding: this.ngFormBuilder.control(options?.branding),
+            brandingSubheading: this.ngFormBuilder.control(options?.brandingSubheading ?? ''),
             dimmerDelay: this.ngFormBuilder.control(options?.dimmerDelay, [Validators.required, Validators.min(0)]),
             disableDuplicateDetection: this.ngFormBuilder.control(options?.disableDuplicateDetection),
             duplicateDetectionTimeFrame: this.ngFormBuilder.control(options?.duplicateDetectionTimeFrame, [Validators.required, Validators.min(0)]),

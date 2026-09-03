@@ -1,11 +1,14 @@
 @if (auth) {
-  <ember-scanner-pin [branding]="branding" [busy]="pinPending" [error]="pinError"
+  <ember-scanner-pin [branding]="branding" [brandingSubheading]="brandingSubheading" [busy]="pinPending" [error]="pinError"
     (pinChange)="clearPinError()" (pinSubmit)="authenticate($event)"></ember-scanner-pin>
 } @else {
 <div class="ember-status">
   <div class="branding">
     @if (branding) {
       <span class="branding-label">{{ branding }}</span>
+    }
+    @if (brandingSubheading) {
+      <span class="branding-subheading">{{ brandingSubheading }}</span>
     }
     <span class="branding-product">EMBER SCANNER</span>
   </div>

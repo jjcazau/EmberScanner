@@ -8,6 +8,7 @@
   text-transform: uppercase;
 
   .branding-label,
+  .branding-subheading,
   .branding-product {
     max-width: 100%;
     overflow: hidden;
@@ -28,13 +29,22 @@
       1px 1px 0 rgba(255, 255, 255, 0.32);
   }
 
+  .branding-subheading,
   .branding-product {
     color: rgba(163, 168, 171, 0.58);
-    font-size: 9px;
     font-weight: 500;
     letter-spacing: 0.22em;
     line-height: 1;
     text-shadow: -1px -1px 0 rgba(0, 0, 0, 0.55);
+  }
+
+  .branding-subheading {
+    font-size: 12px;
+    line-height: 1.2;
+  }
+
+  .branding-product {
+    font-size: 9px;
   }
 }
 

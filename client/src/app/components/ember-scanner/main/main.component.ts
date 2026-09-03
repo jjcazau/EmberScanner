@@ -50,6 +50,7 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
     avoided = false;
 
     branding = '';
+    brandingSubheading = '';
 
     call: EmberScannerCall | undefined;
     callDate: Date | undefined;
@@ -545,6 +546,7 @@ export class EmberScannerMainComponent implements OnDestroy, OnInit {
             this.config = event.config;
 
             this.branding = this.config?.branding ?? '';
+            this.brandingSubheading = this.config?.brandingSubheading ?? '';
 
             this.email = this.config?.email ?? '';
 

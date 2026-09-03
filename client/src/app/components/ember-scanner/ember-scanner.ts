@@ -96,6 +96,7 @@ export enum EmberScannerCategoryType {
 export interface EmberScannerConfig {
     alerts?: EmberScannerAlerts;
     branding?: string;
+    brandingSubheading?: string;
     dimmerDelay: number | false;
     email?: string;
     groups: { [key: string]: { [key: number]: number[] } };

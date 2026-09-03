@@ -35,6 +35,7 @@ type Options struct {
 	AudioConversion             uint   `json:"audioConversion"`
 	AutoPopulate                bool   `json:"autoPopulate"`
 	Branding                    string `json:"branding"`
+	BrandingSubheading          string `json:"brandingSubheading"`
 	DimmerDelay                 uint   `json:"dimmerDelay"`
 	DisableDuplicateDetection   bool   `json:"disableDuplicateDetection"`
 	DuplicateDetectionTimeFrame uint   `json:"duplicateDetectionTimeFrame"`
@@ -89,6 +90,8 @@ func (options *Options) FromMap(m map[string]any) *Options {
 	case string:
 		options.Branding = v
 	}
+
+	options.BrandingSubheading, _ = m["brandingSubheading"].(string)
 
 	switch v := m["dimmerDelay"].(type) {
 	case float64:
@@ -210,6 +213,7 @@ func (options *Options) Read(db *Database) error {
 	options.adminPasswordNeedChange = defaults.adminPasswordNeedChange
 	options.AudioConversion = defaults.options.audioConversion
 	options.AutoPopulate = defaults.options.autoPopulate
+	options.BrandingSubheading = ""
 	options.DimmerDelay = defaults.options.dimmerDelay
 	options.DisableDuplicateDetection = defaults.options.disableDuplicateDetection
 	options.DuplicateDetectionTimeFrame = defaults.options.duplicateDetectionTimeFrame
@@ -282,6 +286,12 @@ func (options *Options) Read(db *Database) error {
 				switch v := f.(type) {
 				case string:
 					options.Branding = v
+				}
+			}
+		case "brandingSubheading":
+			if err = json.Unmarshal([]byte(value.String), &f); err == nil {
+				if v, ok := f.(string); ok {
+					options.BrandingSubheading = v
 				}
 			}
 		case "dimmerDelay":
@@ -409,8 +419,8 @@ func (options *Options) Write(db *Database) error {
 	set := func(key string, val any) {
 		if val, err = json.Marshal(val); err == nil {
 			switch v := val.(type) {
-			case string:
-				val = escapeQuotes(v)
+			case []byte:
+				val = escapeQuotes(string(v))
 			}
 
 			query := fmt.Sprintf(`UPDATE "options" SET "value" = '%s' WHERE "key" = '%s'`, val, key)
@@ -433,6 +443,7 @@ func (options *Options) Write(db *Database) error {
 	set("adminPasswordNeedChange", options.adminPasswordNeedChange)
 	set("autoPopulate", options.AutoPopulate)
 	set("branding", options.Branding)
+	set("brandingSubheading", options.BrandingSubheading)
 	set("dimmerDelay", options.DimmerDelay)
 	set("disableDuplicateDetection", options.DisableDuplicateDetection)
 	set("duplicateDetectionTimeFrame", options.DuplicateDetectionTimeFrame)
