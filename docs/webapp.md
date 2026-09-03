@@ -1,5 +1,22 @@
 # The web app
 
+## Background listening on iPhone
+
+The web player uses one local audio stream for live calls and their alert tones.
+While Live Feed is on, that stream remains open with silence between calls.
+The server connection and talkgroup selection work as before; no microphone
+access or separate server audio stream is needed. Supported browsers expose
+play, pause, and stop through system media controls. Pausing or stopping the
+feed stops the local player, and returning to the app retries interrupted
+playback and reconnects a closed connection.
+
+Background listening is experimental on iOS. A silent stream does not guarantee
+that iOS will keep the web app or its WebSocket running. To test an installed
+Home Screen app, start Live Feed, lock the phone, wait several minutes without
+any transmissions, then check that a new call plays. Also check switching apps,
+phone-call interruptions, Bluetooth output, and Wi-Fi/mobile-data changes. If
+playback does not recover, reopen the app and turn Live Feed off and back on.
+
 ## Main screen
 
 The main [Ember Scanner](https://github.com/jjcazau/EmberScanner) screen as three sections, the LED area, the display area and the controls area.

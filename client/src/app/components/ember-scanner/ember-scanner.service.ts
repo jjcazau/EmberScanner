@@ -22,6 +22,7 @@ import { EventEmitter, Inject, Injectable, OnDestroy, DOCUMENT } from '@angular/
 import { Router } from '@angular/router';
 import { interval, Observable, Subject, Subscription, timer, timeout } from 'rxjs';
 import { ScannerActivity } from './activity/activity';
+import { ScannerAudioOutput } from './audio-output';
 import { takeWhile } from 'rxjs/operators';
 import {
     EmberScannerAvoidOptions,
@@ -95,6 +96,11 @@ export class EmberScannerService implements OnDestroy {
     }
 
     private audioContext: AudioContext | undefined;
+    private audioOutput: ScannerAudioOutput | undefined;
+    private destroyed = false;
+    private readonly audioCleanup: (() => void)[] = [];
+    private readonly mediaActions: MediaSessionAction[] = [];
+    private reconnectTimer: Subscription | undefined;
 
     private audioGain: GainNode | undefined;
 
@@ -484,6 +490,8 @@ export class EmberScannerService implements OnDestroy {
             this.event.emit({ playbackPending: id });
         }
 
+        this.initializeAudio();
+        this.syncAudioOutput();
         this.getCall(id, WebsocketCallFlag.Play);
     }
 
@@ -498,27 +506,45 @@ export class EmberScannerService implements OnDestroy {
         }
 
         this.historyPlaybackPending = id;
+        this.initializeAudio();
+        this.syncAudioOutput();
         this.getCall(id, WebsocketCallFlag.History);
     }
 
     ngOnDestroy(): void {
+        this.destroyed = true;
+        this.reconnectTimer?.unsubscribe();
+        this.skipDelay?.unsubscribe();
+        this.audioCleanup.forEach(cleanup => cleanup());
         this.closeWebsocket();
-
         this.stop();
+        this.audioOutput?.dispose();
+        if (this.audioContext) {
+            this.audioContext.onstatechange = null;
+            void this.audioContext.close().catch(() => undefined);
+        }
+        if (this.oscillatorContext) {
+            void this.oscillatorContext.close().catch(() => undefined);
+        }
+        if ('mediaSession' in navigator) {
+            this.mediaActions.forEach(action => navigator.mediaSession.setActionHandler(action, null));
+            navigator.mediaSession.metadata = null;
+            navigator.mediaSession.playbackState = 'none';
+        }
     }
 
     pause(status = !this.livefeedPaused): void {
         this.livefeedPaused = status;
 
         if (status) {
-            this.audioContext?.suspend();
-
+            this.audioOutput?.stop();
+            void this.audioContext?.suspend().catch(() => undefined);
         } else {
-            this.audioContext?.resume();
-
+            this.initializeAudio();
             this.play();
         }
 
+        this.syncAudioOutput();
         this.event.emit({ pause: this.livefeedPaused });
     }
 
@@ -536,6 +562,8 @@ export class EmberScannerService implements OnDestroy {
     }
 
     play(call?: EmberScannerCall | undefined): void {
+        if (this.destroyed) return;
+        if (call?.audio) this.initializeAudio();
         if (!this.audioContext || this.livefeedPaused || this.skipDelay) {
             return;
 
@@ -553,6 +581,7 @@ export class EmberScannerService implements OnDestroy {
             this.call = this.callQueue.shift();
         }
 
+        this.syncAudioOutput();
         if (!this.call?.audio) {
             return;
         }
@@ -704,8 +733,11 @@ export class EmberScannerService implements OnDestroy {
 
     startLivefeed(): void {
         this.livefeedMode = EmberScannerLivefeedMode.Online;
+        this.livefeedPaused = false;
+        this.initializeAudio();
+        this.syncAudioOutput();
 
-        this.event.emit({ livefeedMode: this.livefeedMode });
+        this.event.emit({ livefeedMode: this.livefeedMode, pause: false });
 
         this.syncLivefeedMap();
     }
@@ -727,6 +759,7 @@ export class EmberScannerService implements OnDestroy {
             this.call = undefined;
         }
 
+        this.syncAudioOutput();
         if (typeof options?.emit !== 'boolean' || options.emit) {
             this.event.emit({ call: this.call });
         }
@@ -734,6 +767,10 @@ export class EmberScannerService implements OnDestroy {
 
     stopLivefeed(): void {
         this.livefeedMode = EmberScannerLivefeedMode.Offline;
+        this.historyPlaybackPending = undefined;
+        this.playbackPending = undefined;
+        this.skipDelay?.unsubscribe();
+        this.skipDelay = undefined;
 
         this.clearQueue();
 
@@ -746,6 +783,10 @@ export class EmberScannerService implements OnDestroy {
 
     stopPlaybackMode(): void {
         this.livefeedMode = EmberScannerLivefeedMode.Offline;
+        this.historyPlaybackPending = undefined;
+        this.playbackPending = undefined;
+        this.skipDelay?.unsubscribe();
+        this.skipDelay = undefined;
 
         this.playbackRefreshing = false;
 
@@ -810,67 +851,103 @@ export class EmberScannerService implements OnDestroy {
     }
 
     private bootstrapAudio(): void {
-        const events = ['keydown', 'mousedown', 'touchstart'];
-
-        const bootstrap = async () => {
-            // Web Audio defaults to ambient sound on iOS, which obeys Silent Mode.
-            // Declare media playback before creating either audio context.
-            try {
-                const audioSession = (navigator as Navigator & {
-                    audioSession?: { type: string };
-                }).audioSession;
-                if (audioSession) audioSession.type = 'playback';
-            } catch (error) {
-                // An unsupported session override must not prevent audio startup.
-                console.warn('Unable to configure the playback audio session', error);
-            }
-
-            if (!this.audioContext) {
-                this.audioContext = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'playback' });
-
-                this.audioGain = this.audioContext.createGain();
-                this.audioGain.gain.value = this.volumeLevel;
-                this.audioGain.connect(this.audioContext.destination);
-            }
-
-            if (!this.oscillatorContext) {
-                this.oscillatorContext = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
-            }
-
-            if (this.audioContext) {
-                const resume = () => {
-                    if (!this.livefeedPaused) {
-                        if (this.audioContext?.state === 'suspended') {
-                            this.audioContext?.resume().then(() => resume());
-                        }
-                    }
-                };
-
-                await this.audioContext.resume();
-
-                this.audioContext.onstatechange = () => resume();
-            }
-
-            if (this.oscillatorContext) {
-                const resume = () => {
-                    if (this.oscillatorContext?.state === 'suspended') {
-                        this.oscillatorContext?.resume().then(() => resume());
-                    }
-                };
-
-                await this.oscillatorContext.resume();
-
-                this.oscillatorContext.onstatechange = () => resume();
-            }
-
-            if (this.audioContext && this.oscillatorContext) {
-                events.forEach((event) => document.body.removeEventListener(event, bootstrap));
-
-                this.play();
-            }
+        const gesture = () => {
+            this.initializeAudio();
+            if (this.wantsAudioPlayback) this.syncAudioOutput();
+        };
+        const recover = () => {
+            if (this.destroyed || this.document.visibilityState === 'hidden') return;
+            if (this.wantsAudioPlayback) this.syncAudioOutput();
+            if (this.websocket?.readyState === WebSocket.CLOSED) this.reconnectWebsocket();
         };
 
-        events.forEach((event) => document.body.addEventListener(event, bootstrap));
+        for (const event of ['keydown', 'mousedown', 'touchstart']) {
+            this.document.body.addEventListener(event, gesture, { passive: true });
+            this.audioCleanup.push(() => this.document.body.removeEventListener(event, gesture));
+        }
+        this.document.addEventListener('visibilitychange', recover);
+        window.addEventListener('pageshow', recover);
+        window.addEventListener('online', recover);
+        this.audioCleanup.push(() => {
+            this.document.removeEventListener('visibilitychange', recover);
+            window.removeEventListener('pageshow', recover);
+            window.removeEventListener('online', recover);
+        });
+    }
+
+    private initializeAudio(): void {
+        if (this.destroyed) return;
+        try {
+            const audioSession = (navigator as Navigator & { audioSession?: { type: string } }).audioSession;
+            if (audioSession) audioSession.type = 'playback';
+        } catch (error) {
+            console.warn('Unable to configure the playback audio session', error);
+        }
+
+        if (!this.audioContext) {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'playback' });
+            this.audioOutput = new ScannerAudioOutput(this.audioContext, this.document, () => this.pause(true));
+            this.audioGain = this.audioContext.createGain();
+            this.audioGain.gain.value = this.volumeLevel;
+            this.audioGain.connect(this.audioOutput.destination);
+            this.audioContext.onstatechange = () => {
+                // Recover once per state change. Do not recursively retry a blocked resume.
+                if (this.wantsAudioPlayback && this.audioContext?.state === 'suspended') {
+                    void this.audioOutput?.start();
+                }
+            };
+            this.installMediaControls();
+        }
+        // Button feedback remains available when radio playback is paused or off.
+        if (!this.oscillatorContext) {
+            this.oscillatorContext = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+        }
+        if (this.oscillatorContext.state !== 'running') {
+            void this.oscillatorContext.resume().catch(() => undefined);
+        }
+    }
+
+    private get wantsAudioPlayback(): boolean {
+        return !this.destroyed && !this.livefeedPaused && (this.livefeedMode !== EmberScannerLivefeedMode.Offline
+            || !!this.call || this.historyPlaybackPending !== undefined);
+    }
+
+    private syncAudioOutput(): void {
+        if (this.wantsAudioPlayback) void this.audioOutput?.start();
+        else this.audioOutput?.stop();
+
+        if (!('mediaSession' in navigator)) return;
+        const hasPlayback = !this.destroyed && (this.livefeedMode !== EmberScannerLivefeedMode.Offline || !!this.call);
+        navigator.mediaSession.playbackState = hasPlayback ? (this.livefeedPaused ? 'paused' : 'playing') : 'none';
+        if (!hasPlayback) {
+            navigator.mediaSession.metadata = null;
+        } else if ('MediaMetadata' in window) {
+            navigator.mediaSession.metadata = new MediaMetadata({
+                title: this.call?.talkgroupData?.name || this.call?.talkgroupData?.label || this.config.branding || 'Ember Scanner',
+                artist: this.call?.systemData?.label || this.config.brandingSubheading || 'Live Feed',
+                album: 'Ember Scanner',
+            });
+        }
+    }
+
+    private installMediaControls(): void {
+        if (!('mediaSession' in navigator)) return;
+        const handlers: [MediaSessionAction, () => void][] = [
+            ['play', () => {
+                if (this.livefeedMode === EmberScannerLivefeedMode.Offline && !this.call) this.startLivefeed();
+                else this.pause(false);
+            }],
+            ['pause', () => this.pause(true)],
+            ['stop', () => this.livefeedMode === EmberScannerLivefeedMode.Online ? this.stopLivefeed() : this.stopPlaybackMode()],
+        ];
+        for (const [action, handler] of handlers) {
+            try {
+                navigator.mediaSession.setActionHandler(action, handler);
+                this.mediaActions.push(action);
+            } catch {
+                // Individual remote-control actions are not supported by every browser.
+            }
+        }
     }
 
     private cleanQueue(): void {
@@ -982,7 +1059,8 @@ export class EmberScannerService implements OnDestroy {
             this.event.emit({ linked: false });
 
             if (ev.code !== 1000) {
-                timer(2000).subscribe(() => this.reconnectWebsocket());
+                this.reconnectTimer?.unsubscribe();
+                this.reconnectTimer = timer(2000).subscribe(() => this.reconnectWebsocket());
             }
         };
 
@@ -1212,7 +1290,7 @@ export class EmberScannerService implements OnDestroy {
 
             if (!alert) alert = call.talkgroupData?.alert;
 
-            if (alert) await this.playOscillatorSequence(this.config.alerts[alert]);
+            if (alert) await this.playOscillatorSequence(this.config.alerts[alert], true);
             console.log(alert);
         }
     }
@@ -1280,11 +1358,11 @@ export class EmberScannerService implements OnDestroy {
         }
     }
 
-    private playOscillatorSequence(seq: EmberScannerOscillatorData[]): Promise<void> {
+    private playOscillatorSequence(seq: EmberScannerOscillatorData[], forCall = false): Promise<void> {
         return new Promise((resolve) => {
-            const context = this.oscillatorContext;
+            const context = forCall ? this.audioContext : this.oscillatorContext;
 
-            if (!context || !seq) {
+            if (!context || !seq?.length) {
                 resolve();
 
                 return;
@@ -1292,9 +1370,9 @@ export class EmberScannerService implements OnDestroy {
 
             const gn = context.createGain();
 
-            gn.gain.value = .1 * this.volumeLevel;
+            gn.gain.value = forCall ? .1 : .1 * this.volumeLevel;
 
-            gn.connect(context.destination);
+            gn.connect(forCall && this.audioGain ? this.audioGain : context.destination);
 
             seq.forEach((data, index) => {
                 const osc = context.createOscillator();
@@ -1411,6 +1489,9 @@ export class EmberScannerService implements OnDestroy {
     }
 
     private reconnectWebsocket(): void {
+        if (this.destroyed) return;
+        this.reconnectTimer?.unsubscribe();
+        this.reconnectTimer = undefined;
         this.closeWebsocket();
 
         this.openWebsocket();
